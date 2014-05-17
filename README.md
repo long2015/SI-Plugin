@@ -9,13 +9,13 @@ source insight macro plugin
 自动补全功能if else while for 
 trace include main
 2、插入函数名
-InsertFuncName
-InsertPoint
+InsertFuncName Ctrl+`
+InsertPoint	Ctrl+1
 4、光标移动
-行首，行尾
-注释
+行首Ctrl+a，行尾Ctrl+e 单词移动Ctrl+left(right)
+注释Ctrl+/
 5、svn相关
-log diff blace explorer
-
+log:Alt+h diff:Alt+d blame:Alt+b explorer:Alt+e
 doxyen
+
 6、快捷启动Ctrl+Enter

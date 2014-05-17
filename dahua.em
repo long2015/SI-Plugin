@@ -479,6 +479,23 @@ macro jumpLineEnd()
     sel.ichLim = index
     SetWndSel(hwnd, sel)
 }
+macro InsertPoint()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    SetBufSelText(hbuf, "tracepoint();");
+
+    linebuf = GetBufLine(hbuf,sel.lnFirst)
+    lnblanks = GetBeginBlank(linebuf)
+    InsBufLine(hbuf, sel.lnFirst + 1, lnblanks);
+    sel.lnFirst = sel.lnFirst + 1
+    sel.lnLast = sel.lnFirst
+    SetWndSel(hwnd, sel)
+}
 macro InsertFuncName()
 {
     hwnd = GetCurrentWnd()
