@@ -86,6 +86,24 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
+    else if( cmd == "main" )
+    {
+        sel.ichFirst = sel.ichFirst - 4
+        ln = sel.lnFirst
+        SetWndSel(hwnd, sel)
+        SetBufSelText(hbuf,"int main(int argc, char* argv[])")
+        InsBufLine(hbuf, ln + 1, "{")
+        InsBufLine(hbuf, ln + 2, "    ")
+        InsBufLine(hbuf, ln + 3, "    ")
+        InsBufLine(hbuf, ln + 4, "    return 0;")
+        InsBufLine(hbuf, ln + 5, "}")
+        sel.ichFirst = sel.ichFirst + 4
+        sel.ichLim = sel.ichLim
+        sel.lnFirst = ln + 2
+        sel.lnLast = sel.lnFirst
+        SetWndSel(hwnd,sel)
+        return
+    }
     else if( cmd == "if" || cmd == "while" || cmd == "for" || cmd == "elif" )
     {
         if( cmd == "elif" )
@@ -606,4 +624,8 @@ macro explorer()
   path = strmid(filename,0,getFileName(filename));
   cmdline = cat(cat("explorer /select,\"",filename),"\"");
   RunCmdLine (cmdline, path, 0);
+}
+macro RunExe()
+{
+
 }
