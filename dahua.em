@@ -36,45 +36,14 @@ macro tabCompletion()
         stop
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
-
-    if (sel.ichFirst == 0 )
-    {
-        Tab
-        return
-    }
-    else if( sel.ichFirst != sel.ichLim )
-    {
-        line = sel.lnFirst
-        lnFirst = sel.lnFirst
-        lnLast = sel.lnLast
-        ichFirst = sel.ichFirst
-        ichLim = sel.ichLim
-        while( line <= lnLast )
-        {
-            if(line == lnFirst )
-            {
-                sel.ichLim = ichFirst
-            }
-            else
-            {
-                sel.ichFirst = 0
-                sel.ichLim = 0
-            }
-            sel.lnFirst = line
-            sel.lnLast = line
-            SetWndSel(hwnd, sel)
-            SetBufSelText(hbuf, "    ")
-            line = line + 1
-        }
-        sel.lnFirst = lnFirst
-        sel.lnLast = lnLast
-        sel.ichFirst = ichFirst + 4
-        sel.ichLim = ichLim + 4
-        SetWndSel(hwnd, sel)
-        return
-    }
     curLinebuf = GetBufLine(hbuf, sel.lnFirst);
     curLineLen = strlen(curLinebuf)
+
+    if( CheckTab() == true )
+    {
+        //tab键
+        stop
+    }
 
     left = GetLeftNoBlank(sel.ichFirst, curLinebuf)
     right = GetRightNoBlank(sel.ichFirst, curLinebuf)
@@ -117,59 +86,55 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-    else if( cmd == "if" || cmd == "while" || cmd == "for" || cmd == "else" )
+    else if( cmd == "if" || cmd == "while" || cmd == "for" )
     {
-        if( cmd == "for" )
-        {
-            SetBufSelText(hbuf, "()")
-        }
-		else if( cmd != "else" )
-		{
-			SetBufSelText(hbuf, "(  )")
-		}
+
+		SetBufSelText(hbuf, "(  )")
+
 		InsBufLine(hbuf, ln + 1, lnblanks # "{");
 		InsBufLine(hbuf, ln + 2, lnblanks # "    /* code */");
 		InsBufLine(hbuf, ln + 3, lnblanks # "}");
-		if( cmd == "else" )
-		{
-            //else要跳转到下两行
-			sel.lnFirst = ln + 2
-		}
-        if( cmd == "for" )
-        {
-            sel.ichFirst = sel.ichFirst + 1
-        }
-        else if( cmd != "else" )
-        {
-            sel.ichFirst = sel.ichFirst + 2
-        }
-        sel.lnLast = sel.lnFirst
-		sel.ichLim = sel.ichFirst
 
+        sel.ichFirst = sel.ichFirst + 2
+        sel.ichLim = sel.ichFirst
+        sel.lnLast = sel.lnFirst
         SetWndSel(hwnd, sel)
         return
     }
-	else if( cmd == ")" )
-	{
-		linecur = GetBufLine(hbuf, ln);
-		line1 = GetBufLine(hbuf, ln+1);
-		line2 = GetBufLine(hbuf, ln+2);
-		line3 = GetBufLine(hbuf, ln+3);
+    else if( cmd == "else" || cmd == ")")
+    {
+        linecur = GetBufLine(hbuf, ln);
+        line1 = GetBufLine(hbuf, ln+1);
+        line2 = GetBufLine(hbuf, ln+2);
+        line3 = GetBufLine(hbuf, ln+3);
 
-		szLine1 = lnblanks # "{"
-		szLine2 = lnblanks # "    /* code */"
-		szLine3 = lnblanks # "}"
-		if( line1 == szLine1 && line2 == szLine2 && line3 == szLine3 )
-		{
-			sel.lnFirst = ln + 2
-			sel.lnLast = sel.lnFirst
-			sel.ichFirst = strlen(lnblanks) + 4
-			sel.ichLim = sel.ichFirst + 10
-			SetWndSel(hwnd, sel)
-			return
-		}
-	}
+        szLine1 = lnblanks # "{"
+        szLine2 = lnblanks # "    /* code */"
+        szLine3 = lnblanks # "}"
 
+        sel.ichFirst = strlen(lnblanks) + 4
+        if( line1 == szLine1 && line2 == szLine2 && line3 == szLine3 )
+        {
+            sel.ichLim = sel.ichFirst + 10
+        }
+        else if( line1 == szLine1 )
+        {
+            sel.ichLim = sel.ichFirst
+        }
+        else if( cmd == "else" )
+        {
+            InsBufLine(hbuf, ln + 1, szLine1);
+            InsBufLine(hbuf, ln + 2, szLine2);
+            InsBufLine(hbuf, ln + 3, szLine3);
+            sel.ichLim = sel.ichFirst + 10
+        }
+
+
+        sel.lnFirst = ln + 2
+        sel.lnLast = sel.lnFirst
+        SetWndSel(hwnd, sel)
+        return
+    }
 	else if( cmd == "{" )
 	{
 		InsBufLine(hbuf, ln+1, lnblanks # "    ");
@@ -187,6 +152,61 @@ macro tabCompletion()
         Tab
         return
     }
+}
+macro CheckTab()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    curLinebuf = GetBufLine(hbuf, sel.lnFirst);
+
+    if( sel.ichFirst != sel.ichLim )
+    {
+        line = sel.lnFirst
+        lnFirst = sel.lnFirst
+        lnLast = sel.lnLast
+        ichFirst = sel.ichFirst
+        ichLim = sel.ichLim
+        while( line <= lnLast )
+        {
+            if(line == lnFirst )
+            {
+                sel.ichLim = ichFirst
+            }
+            else
+            {
+                sel.ichFirst = 0
+                sel.ichLim = 0
+            }
+            sel.lnFirst = line
+            sel.lnLast = line
+            SetWndSel(hwnd, sel)
+            SetBufSelText(hbuf, "    ")
+            line = line + 1
+        }
+        sel.lnFirst = lnFirst
+        sel.lnLast = lnLast
+        sel.ichFirst = ichFirst + 4
+        sel.ichLim = ichLim + 4
+        SetWndSel(hwnd, sel)
+
+        return true
+    }
+    else if( sel.ichFirst == 0 )
+    {
+        Tab
+        return true
+    }
+    else if( curLinebuf[sel.ichFirst-1] == " "
+            || curLinebuf[sel.ichFirst-1] == "\t" ) 
+    {
+        Tab
+        return true
+    }
+
+    return false
 }
 //
 macro GetLeftNoBlank(ich, linebuf)
@@ -278,7 +298,7 @@ macro GetBeginNoBlank(ich, linebuf)
     ich1 = ich
     len = strlen(linebuf)
     ich = 0
-    while (ich <= ich1 && ich < len)
+    while (ich < ich1 && ich < len)
     {
         if (linebuf[ich] == " " || linebuf[ich] == chTab)
         {
@@ -289,6 +309,14 @@ macro GetBeginNoBlank(ich, linebuf)
         {
             break
         }
+    }
+    if( ich == ich1 )
+    {
+        ich = ich -1
+    }
+    if( ich < 0 )
+    {
+        ich = 0
     }
 
     asciiA = AsciiFromChar("A")
@@ -458,12 +486,21 @@ macro InsertFuncName()
 			break
 		index = index + 1
 	}
-	classname = strmid(symbolname,0,index)
-	funcname = strmid(symbolname,index+1,len)
-	
-    SetBufSelText (hbuf, "trace(\"" # classname # "::" # funcname # "\");")
+    if( index == len)
+    {
+        str = "trace(\"" # symbolname # ">>> \");"
+    }
+    else
+    {
+        classname = strmid(symbolname,0,index)
+        funcname = strmid(symbolname,index+1,len)
+        str = "trace(\"" # classname # "::" # funcname # ">>> \");"
+    }
+    SetBufSelText(hbuf, str)
+    sel.ichFirst = sel.ichFirst + strlen(str) - 3
+    sel.ichLim = sel.ichFirst
+    SetWndSel(hwnd, sel)
 }
-
 
 macro MultiLineComment()
 {
