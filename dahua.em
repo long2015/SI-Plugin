@@ -86,10 +86,19 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-    else if( cmd == "if" || cmd == "while" || cmd == "for" )
+    else if( cmd == "if" || cmd == "while" || cmd == "for" || cmd == "elif" )
     {
-
-		SetBufSelText(hbuf, "(  )")
+        if( cmd == "elif" )
+        {
+            sel.ichFirst = sel.ichFirst - 4
+            SetWndSel(hwnd, sel)
+            SetBufSelText(hbuf, "else if(  )")
+            sel.ichFirst = sel.ichFirst + 7
+        }
+        else
+        {
+            SetBufSelText(hbuf, "(  )")
+        }
 
 		InsBufLine(hbuf, ln + 1, lnblanks # "{");
 		InsBufLine(hbuf, ln + 2, lnblanks # "    /* code */");
@@ -161,6 +170,7 @@ macro CheckTab()
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
     curLinebuf = GetBufLine(hbuf, sel.lnFirst);
+    len = strlen(curLinebuf)
 
     if( sel.ichFirst != sel.ichLim )
     {
@@ -199,8 +209,8 @@ macro CheckTab()
         Tab
         return true
     }
-    else if( curLinebuf[sel.ichFirst-1] == " "
-            || curLinebuf[sel.ichFirst-1] == "\t" ) 
+    else if( sel.ichFirst == len && (curLinebuf[sel.ichFirst-1] == " "
+            || curLinebuf[sel.ichFirst-1] == "\t") ) 
     {
         Tab
         return true
@@ -541,7 +551,42 @@ macro MultiLineComment()
         SetBufSelText(hbuf, "// ")
         line = line + 1
     }
-
   
     SetWndSel(hwnd, sel)
+}
+
+macro blame()
+{
+  filename = GetBufName (GetCurrentBuf ())
+  path = strmid(filename,0,getFileName(filename));
+  cmdline = cat(cat("cmd /C \"TortoiseProc.exe /command:blame /path:\"",filename),"\"\"")
+  RunCmdLine (cmdline, path, 0);
+}
+
+macro diff()
+{
+
+  filename = GetBufName (GetCurrentBuf ())
+  path = strmid(filename,0,getFileName(filename));
+  cmdline = cat(cat("cmd /C \"TortoiseProc.exe /command:diff /path:\"",filename),"\"\"")
+  //cmdline = cat(cat("TortoiseProc.exe /command:diff /path:\"",filename),"\"")
+  RunCmdLine (cmdline, path, 0);
+}
+
+macro log()
+{
+  filename = GetBufName (GetCurrentBuf ())
+
+  path = strmid(filename,0,getFileName(filename));
+  cmdline = cat(cat("cmd /C \"TortoiseProc.exe /command:log /path:\"",filename),"\"\"")
+  //cmdline = cat(cat("TortoiseProc.exe /command:diff /path:\"",filename),"\"")
+  RunCmdLine (cmdline, path, 0);
+}
+
+macro explorer()
+{
+  filename = GetBufName (GetCurrentBuf ())
+  path = strmid(filename,0,getFileName(filename));
+  cmdline = cat(cat("explorer /select,\"",filename),"\"");
+  RunCmdLine (cmdline, path, 0);
 }
