@@ -553,29 +553,80 @@ macro MultiLineComment()
     sel = GetWndSel(hwnd)
     LnFirst = GetWndSelLnFirst(hwnd)      //取首行行号
     LnLast = GetWndSelLnLast(hwnd)      //取末行行号
+    ichFirst = sel.ichFirst
+    ichLim = sel.ichLim
     hbuf = GetCurrentBuf()
-  
+
+    //先检查是否已注释过
+    line = lnFirst
+    while( line <= lnLast )
+    {
+        buf = GetBufLine(hbuf,line)
+        blanks = GetBeginBlank(buf)
+        ichFirst = strlen(blanks)
+        len = strlen(buf)
+        if( ichFirst+3 > len )
+            break
+
+        if( strmid(buf,ichFirst,ichFirst+3) == "// " )
+        {
+            line = line + 1
+            continue
+        }
+        else
+        {
+            break
+        }
+    }
+    //去除注释
+    if( line == lnLast + 1 )
+    {
+        line = lnFirst
+        while(line <= lnLast)
+        {
+            buf = GetBufLine(hbuf,line)
+            blanks = GetBeginBlank(buf)
+            ichFirst = strlen(blanks)
+            len = strlen(buf)
+            newbuf = strmid(buf, ichFirst+3,len)
+            DelBufLine(hbuf,line)
+            InsBufLine(hbuf,line,blanks # newbuf)
+            line = line + 1
+        }
+        sel.ichFirst = ichFirst
+        sel.ichLim = ichLim - 3
+        sel.lnFirst = lnFirst
+        sel.lnLast = lnLast
+        SetWndSel(hwnd, sel)
+        SetWndSel(hwnd, sel)
+        return
+    }
+
+    //增加注释
+    minFirst = 9999
     line = Lnfirst
     while( line <= lnLast )
     {
         buf = GetBufLine(hbuf, line)
         len = strlen(buf)
         index = 0
-        minFirst = 9999
+        //查找最左边的非空字符
         while( index <= len )
         {
-            if( buf[index] != " " && buf[index] != "\t")
+            if( buf[index] != " " && buf[index] != "    ")
             {
                 break
             }
             index = index + 1
         }
+
         if( index < minFirst )
         {
             minFirst = index
         }
         line = line + 1
     }
+    line = lnFirst
     while( line <= lnLast )
     {
         sel.ichFirst = minFirst
@@ -586,7 +637,10 @@ macro MultiLineComment()
         SetBufSelText(hbuf, "// ")
         line = line + 1
     }
-  
+    sel.ichFirst = ichFirst + 3
+    sel.ichLim = ichLim + 3
+    sel.lnFirst = lnFirst
+    sel.lnLast = lnLast
     SetWndSel(hwnd, sel)
 }
 
