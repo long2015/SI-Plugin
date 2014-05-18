@@ -497,6 +497,152 @@ macro jumpLineEnd()
     sel.ichLim = index
     SetWndSel(hwnd, sel)
 }
+macro IsWord(ch)
+{
+    asciiA = AsciiFromChar("A")
+    asciiZ = AsciiFromChar("Z")
+    ch = toupper(ch)
+    asciiCh = AsciiFromChar(ch)
+
+    if( asciiCh >= asciiA && asciiCh <= asciiZ )
+    {
+        return true
+    }
+    else
+    {
+        return false
+    }
+}
+macro IsSymbol(ch)
+{
+    if( IsWord(ch) == true || ch == "_" || IsNumber(ch) )
+    {
+        return true
+    }
+    else
+    {
+        return false
+    }
+}
+macro GoLeft()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    linebuf = GetBufLine(hbuf,sel.lnFirst)
+    ichFirst = sel.ichFirst
+    lnFirst = sel.lnFirst
+
+    ichFirst = ichFirst - 1
+    if( ichFirst < 0 )
+    {
+        lnFirst = lnFirst - 1
+        if(lnFirst < 0)
+        {
+            ichFirst = 0
+            lnFirst = 0
+        }
+        else
+        {
+            linebuf = GetBufLine(hbuf,lnFirst)
+            ichFirst = strlen(linebuf)
+        }
+
+        sel.ichFirst = ichFirst
+        sel.ichLim = ichFirst
+        sel.lnFirst = lnFirst
+        sel.lnLast = lnFirst
+        SetWndSel(hwnd, sel)
+        return
+    }
+    hasword = false
+    while( ichFirst >= 0 )
+    {
+        ch = linebuf[ichFirst]
+
+        if( hasword == false && IsSymbol(ch) == false )
+        {
+            ichFirst = ichFirst - 1
+        }
+        else if( IsSymbol(ch) )
+        {
+            hasword = true
+            ichFirst = ichFirst - 1
+        }
+        else
+        {
+            break
+        }
+    }
+    if( hasword == true )
+    {
+        ichFirst = ichFirst + 1
+    }
+    sel.ichFirst = ichFirst
+    sel.ichLim = sel.ichFirst
+    SetWndSel(hwnd, sel)
+}
+macro GoRight()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    linebuf = GetBufLine(hbuf,sel.lnFirst)
+    len = strlen(linebuf)
+    maxline = GetBufLineCount(hbuf)
+    ichFirst = sel.ichFirst
+    lnFirst = sel.lnFirst
+
+    ichFirst = ichFirst + 1
+    if( ichFirst > len )
+    {
+        lnFirst = lnFirst + 1
+        if(lnFirst > maxline)
+        {
+            ichFirst = len
+            lnFirst = maxline
+        }
+        else
+        {
+            ichFirst = 0
+        }
+
+        sel.ichFirst = ichFirst
+        sel.ichLim = ichFirst
+        sel.lnFirst = lnFirst
+        sel.lnLast = lnFirst
+        SetWndSel(hwnd, sel)
+        return
+    }
+    hasword = false
+    while( ichFirst < len )
+    {
+        ch = linebuf[ichFirst]
+
+        if( hasword == false && IsSymbol(ch) == false )
+        {
+            ichFirst = ichFirst + 1
+        }
+        else if( IsSymbol(ch) )
+        {
+            hasword = true
+            ichFirst = ichFirst + 1
+        }
+        else
+        {
+            break
+        }
+    }
+    sel.ichFirst = ichFirst
+    sel.ichLim = sel.ichFirst
+    SetWndSel(hwnd, sel)
+}
 macro InsertPoint()
 {
     hwnd = GetCurrentWnd()
