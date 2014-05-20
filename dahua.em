@@ -643,6 +643,48 @@ macro GoRight()
     sel.ichLim = sel.ichFirst
     SetWndSel(hwnd, sel)
 }
+macro GoUp5()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    sel.lnFirst = sel.lnFirst - 5
+    if( sel.lnFirst < 0 )
+    {
+        sel.lnFirst = 0
+    }
+    sel.lnLast = sel.lnFirst
+    topline = GetWndVertScroll(hwnd)
+    SetWndSel(hwnd,sel)
+    ScrollWndToLine(hwnd,topline-5)
+}
+macro GoDown5()
+{
+    hwnd = GetCurrentWnd()
+    if (hwnd == 0)
+        stop
+
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    lnFirst = sel.lnFirst
+
+    lnFirst = lnFirst + 5
+    if( lnFirst >= GetBufLineCount(hbuf) )
+    {
+        lnFirst = GetBufLineCount(hbuf) - 1
+    }
+    topline = GetWndVertScroll(hwnd)
+    if topline + GetWndLineCount(hwnd) < GetBufLineCount(hbuf)
+        ScrollWndToLine(hwnd,topline + 5)
+
+    sel.lnFirst = lnFirst
+    sel.lnLast = sel.lnFirst
+    SetWndSel(hwnd,sel)
+}
+
 macro InsertPoint()
 {
     hwnd = GetCurrentWnd()

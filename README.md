@@ -16,6 +16,6 @@ InsertPoint	Ctrl+1
 多行注释：Ctrl+/增加，去除注释
 5、svn相关
 log:Alt+h diff:Alt+d blame:Alt+b explorer:Alt+e
-doxyen
+6、doxyen
 
-6、快捷启动Ctrl+Enter
+7、快捷启动Ctrl+Enter
