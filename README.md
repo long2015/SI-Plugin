@@ -12,10 +12,10 @@ trace include main
 InsertFuncName Ctrl+`
 InsertPoint	Ctrl+1
 4、光标移动
-行首Ctrl+a，行尾Ctrl+e 单词移动Ctrl+left(right)
+行首Ctrl+a，行尾Ctrl+e 单词移动Ctrl+left(right) 上下滚屏Ctrl+up(down)
 多行注释：Ctrl+/增加，去除注释
 5、svn相关
 log:Alt+h diff:Alt+d blame:Alt+b explorer:Alt+e
 6、doxyen
-
+函数头
 7、快捷启动Ctrl+Enter

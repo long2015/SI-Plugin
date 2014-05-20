@@ -871,3 +871,31 @@ macro RunExe()
 {
 
 }
+
+///\brief Ìí¼Óº¯ÊýÍ·×¢ÊÍ
+///\param in  
+///\param out 
+///\return 
+macro AddFuncHeader()
+{
+    SysTime = GetSysTime( 0 )
+    date    = StrMid( SysTime, 6, 19 )
+ 
+    // Get a handle to the current file buffer and the name
+    // and location of the current symbol where the cursor is.
+    hbuf = GetCurrentBuf()
+ 
+    if( hbuf == hNil )
+    {
+        return 1
+    }
+ 
+    ln = GetBufLnCur( hbuf )
+    InsBufLine( hbuf, ln + 1, "///\\brief " )
+    InsBufLine( hbuf, ln + 2, "///\\param in " )
+    InsBufLine( hbuf, ln + 3, "///\\param out " )
+    InsBufLine( hbuf, ln + 4, "///\\return " )
+ 
+    // put the insertion point inside the header comment
+    SetBufIns( hbuf, ln+1, 11 )
+}
