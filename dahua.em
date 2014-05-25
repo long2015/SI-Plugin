@@ -21,6 +21,9 @@
 //
 //doxyen
 //6、快捷启动Ctrl+Enter
+//
+//7、文件操作
+//文件切换Ctrl+d
 */
 
 #define IF_KEY 1
@@ -898,4 +901,65 @@ macro AddFuncHeader()
  
     // put the insertion point inside the header comment
     SetBufIns( hbuf, ln+1, 11 )
+}
+macro strrstr(str,str1)
+{
+    len = strlen(str)
+    len1 = strlen(str1)
+    i = len - len1
+
+    while( i > 0 )
+    {
+        strrmp = strmid(str,i,i+len1)
+        if( strrmp == str1 )
+        {
+            return i+1;
+        }
+        i = i - 1;
+    }
+
+    return -1;
+}
+macro JumpCpp()
+{
+    hwnd = GetCurrentWnd()
+    hbuf = GetCurrentBuf()
+    bufname = GetBufName(hbuf)
+    pos = strrstr(bufname,"\\")
+
+    filename = strmid(bufname,pos,strlen(bufname))
+    len = strlen(filename)
+
+    if( filename[len-2] == "." && filename[len-1] == "h" )
+    {
+        file = strmid(filename,0,len-1) # "cpp"
+    }
+    else
+    {
+        file = strmid(filename,0,len-3) # "h"
+    }
+
+    ifile = 0
+    hproj = GetCurrentProj()
+    ifileMax = GetProjFileCount (hproj)
+    while (ifile < ifileMax )
+    {
+        file1 = GetProjFileName (hproj, ifile)
+        len1 = strlen(file1)
+        len = strlen(file)
+        
+        if( len1 < len )
+        {    
+            ifile = ifile + 1
+            continue
+        }
+        if( strmid(file1,len1-len,len1) == file )
+        {
+            break
+        }
+        ifile = ifile + 1
+    }
+
+    fbuf = OpenBuf(file1)
+    SetCurrentBuf(fbuf)
 }
