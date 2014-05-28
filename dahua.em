@@ -21,12 +21,208 @@
 //
 //doxyen
 //6、快捷启动Ctrl+Enter
+//
+//7、文件操作
+//文件切换Ctrl+d
 */
 
 #define IF_KEY 1
 #define FOR_KEY 2
 #define WHILE_KEY 3
 
+/*********************Start Base Functions*********************/
+
+/*
+* 基础函数：字符串处理，查找word
+*
+*/
+
+//返回 str1第n次出现的位置（逆向）
+macro strrstr(str,str1,n)
+{
+    len = strlen(str)
+    len1 = strlen(str1)
+    i = len - len1
+
+    times = 0
+    while( i > 0 )
+    {
+        strrmp = strmid(str,i,i+len1)
+        if( strrmp == str1 )
+        {
+            times = times + 1
+            if( times >= n )
+            {
+                return i+1;
+            }
+        }
+        i = i - 1;
+    }
+
+    return -1;
+}
+
+//
+macro GetLeftNoBlank(ich, linebuf)
+{
+    chTab = CharFromAscii(9)
+    while (ich > 0)
+    {
+        ich = ich - 1;
+        if (linebuf[ich] == " " || linebuf[ich] == chTab)
+        {
+            continue
+        }
+        else
+        {
+            break
+        }
+    }
+
+    asciiA = AsciiFromChar("A")
+    asciiZ = AsciiFromChar("Z")
+    ch = toupper(linebuf[ich])
+    asciiCh = AsciiFromChar(ch)
+    symbol = ""
+    if( asciiCh < asciiA || asciiCh > asciiZ )
+    {
+        //是符号，直接退出
+        symbol.name = linebuf[ich]
+        symbol.ichFirst = ich
+        return symbol
+    }
+
+    //搜索单词
+    ichLim = ich + 1
+    while (ich >= 0)
+    {
+        ch = toupper(linebuf[ich])
+        asciiCh = AsciiFromChar(ch)
+
+        //不是字母，退出
+        if (asciiCh < asciiA || asciiCh > asciiZ)
+            break;
+
+        ich = ich - 1;
+    }
+    ichFirst = ich + 1
+    symbol = ""
+    symbol.name = strmid(linebuf,ichFirst,ichLim)
+    symbol.ichFirst = ichFirst
+    return symbol
+}
+
+macro GetRightNoBlank(ich, linebuf)
+{
+    chTab = CharFromAscii(9)
+    len = strlen(linebuf)
+
+    while (ich < len-1)
+    {
+        ich = ich + 1;
+        if (linebuf[ich] == " " || linebuf[ich] == chTab)
+        {
+            continue
+        }
+        else
+        {
+            break
+        }
+    }
+
+    symbol = ""
+    if( ich == len-1 )
+    {
+        symbol.name = ""
+        symbol.ichFirst = -1
+    }
+    else
+    {
+        //右边只返回一个字符
+        symbol.name = linebuf[ich]
+        symbol.ichFirst = ich
+    }
+
+    return symbol
+}
+macro GetBeginNoBlank(ich, linebuf)
+{
+    chTab = CharFromAscii(9)
+
+    ich1 = ich
+    len = strlen(linebuf)
+    ich = 0
+    while (ich < ich1 && ich < len)
+    {
+        if (linebuf[ich] == " " || linebuf[ich] == chTab)
+        {
+            ich = ich + 1;
+            continue
+        }
+        else
+        {
+            break
+        }
+    }
+    if( ich == ich1 )
+    {
+        ich = ich -1
+    }
+    if( ich < 0 )
+    {
+        ich = 0
+    }
+
+    asciiA = AsciiFromChar("A")
+    asciiZ = AsciiFromChar("Z")
+    ch = toupper(linebuf[ich])
+    asciiCh = AsciiFromChar(ch)
+
+    if( asciiCh < asciiA || asciiCh > asciiZ )
+    {
+        //是符号，直接退出
+        symbol = ""
+        symbol.name = linebuf[ich]
+        symbol.ichFirst = ich
+        return symbol
+    }
+
+    //搜索单词
+    ichFirst = ich
+    while ( ich <= ich1 && ich < len)
+    {
+        ch = toupper(linebuf[ich])
+        asciiCh = AsciiFromChar(ch)
+
+        //不是字母，退出
+        if (asciiCh < asciiA || asciiCh > asciiZ)
+            break;
+
+        ich = ich + 1;
+    }
+    ichLim = ich
+    symbol = ""
+    symbol.name = strmid(linebuf,ichFirst,ichLim)
+    symbol.ichFirst = ichFirst
+    return symbol
+}
+macro GetBeginBlank(linebuf)
+{
+    ich = 0
+    while (linebuf[ich] == " " || linebuf[ich] == "\t")
+    {
+        ich = ich + 1
+    }
+    lineblanks = strmid(linebuf,0,ich)
+    return lineblanks
+}
+
+/*********************End Base Functions*********************/
+
+/*
+* 主功能
+*
+*/
 
 //tab键自动补全功能
 macro tabCompletion()
@@ -235,160 +431,6 @@ macro CheckTab()
     }
 
     return false
-}
-//
-macro GetLeftNoBlank(ich, linebuf)
-{
-    chTab = CharFromAscii(9)
-    while (ich > 0)
-    {
-        ich = ich - 1;
-        if (linebuf[ich] == " " || linebuf[ich] == chTab)
-        {
-            continue
-        }
-        else
-        {
-            break
-        }
-    }
-
-    asciiA = AsciiFromChar("A")
-    asciiZ = AsciiFromChar("Z")
-    ch = toupper(linebuf[ich])
-    asciiCh = AsciiFromChar(ch)
-    symbol = ""
-    if( asciiCh < asciiA || asciiCh > asciiZ )
-    {
-        //是符号，直接退出
-        symbol.name = linebuf[ich]
-        symbol.ichFirst = ich
-        return symbol
-    }
-
-    //搜索单词
-    ichLim = ich + 1
-    while (ich >= 0)
-    {
-        ch = toupper(linebuf[ich])
-        asciiCh = AsciiFromChar(ch)
-
-        //不是字母，退出
-        if (asciiCh < asciiA || asciiCh > asciiZ)
-            break;
-
-        ich = ich - 1;
-    }
-    ichFirst = ich + 1
-    symbol = ""
-    symbol.name = strmid(linebuf,ichFirst,ichLim)
-    symbol.ichFirst = ichFirst
-    return symbol
-}
-
-macro GetRightNoBlank(ich, linebuf)
-{
-    chTab = CharFromAscii(9)
-    len = strlen(linebuf)
-
-    while (ich < len-1)
-    {
-        ich = ich + 1;
-        if (linebuf[ich] == " " || linebuf[ich] == chTab)
-        {
-            continue
-        }
-        else
-        {
-            break
-        }
-    }
-
-    symbol = ""
-    if( ich == len-1 )
-    {
-        symbol.name = ""
-        symbol.ichFirst = -1
-    }
-    else
-    {
-        //右边只返回一个字符
-        symbol.name = linebuf[ich]
-        symbol.ichFirst = ich
-    }
-
-    return symbol
-}
-macro GetBeginNoBlank(ich, linebuf)
-{
-    chTab = CharFromAscii(9)
-
-    ich1 = ich
-    len = strlen(linebuf)
-    ich = 0
-    while (ich < ich1 && ich < len)
-    {
-        if (linebuf[ich] == " " || linebuf[ich] == chTab)
-        {
-            ich = ich + 1;
-            continue
-        }
-        else
-        {
-            break
-        }
-    }
-    if( ich == ich1 )
-    {
-        ich = ich -1
-    }
-    if( ich < 0 )
-    {
-        ich = 0
-    }
-
-    asciiA = AsciiFromChar("A")
-    asciiZ = AsciiFromChar("Z")
-    ch = toupper(linebuf[ich])
-    asciiCh = AsciiFromChar(ch)
-
-    if( asciiCh < asciiA || asciiCh > asciiZ )
-    {
-        //是符号，直接退出
-        symbol = ""
-        symbol.name = linebuf[ich]
-        symbol.ichFirst = ich
-        return symbol
-    }
-
-    //搜索单词
-    ichFirst = ich
-    while ( ich <= ich1 && ich < len)
-    {
-        ch = toupper(linebuf[ich])
-        asciiCh = AsciiFromChar(ch)
-
-        //不是字母，退出
-        if (asciiCh < asciiA || asciiCh > asciiZ)
-            break;
-
-        ich = ich + 1;
-    }
-    ichLim = ich
-    symbol = ""
-    symbol.name = strmid(linebuf,ichFirst,ichLim)
-    symbol.ichFirst = ichFirst
-    return symbol
-}
-macro GetBeginBlank(linebuf)
-{
-    ich = 0
-    while (linebuf[ich] == " " || linebuf[ich] == "\t")
-    {
-        ich = ich + 1
-    }
-    lineblanks = strmid(linebuf,0,ich)
-    return lineblanks
 }
 
 macro jumpOut()
@@ -898,4 +940,56 @@ macro AddFuncHeader()
  
     // put the insertion point inside the header comment
     SetBufIns( hbuf, ln+1, 11 )
+}
+
+macro JumpCpp()
+{
+    hwnd = GetCurrentWnd()
+    hbuf = GetCurrentBuf()
+    bufname = GetBufName(hbuf)
+    pos = strrstr(bufname,"\\",1)
+    //没有找到，则取全部字符串
+    if( pos == -1 )
+    {
+        pos = 0
+    }
+
+    filename = strmid(bufname,pos,strlen(bufname))
+    len = strlen(filename)
+
+    if( filename[len-2] == "." && filename[len-1] == "h" )
+    {
+        file = strmid(filename,0,len-1) # "cpp"
+    }
+    else
+    {
+        file = strmid(filename,0,len-3) # "h"
+    }
+
+    ifile = 0
+    hproj = GetCurrentProj()
+    ifileMax = GetProjFileCount (hproj)
+    while (ifile < ifileMax )
+    {
+        file1 = GetProjFileName (hproj, ifile)
+        len1 = strlen(file1)
+        len = strlen(file)
+        
+        if( len1 < len )
+        {    
+            ifile = ifile + 1
+            continue
+        }
+        if( strmid(file1,len1-len,len1) == file )
+        {
+            break
+        }
+        ifile = ifile + 1
+    }
+
+    if( ifile < ifileMax )
+    {
+        fbuf = OpenBuf(file1)
+        SetCurrentBuf(fbuf)
+    }
 }
