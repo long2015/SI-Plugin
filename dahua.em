@@ -15,11 +15,13 @@
 //InsertPoint
 //4、光标移动
 //行首，行尾
-//注释
+//
 //5、svn相关
 //log diff blace explorer
 //
-//doxyen
+//6、注释
+//多行注释
+//Doxygen文档注释：函数、
 //6、快捷启动Ctrl+Enter
 //
 //7、文件操作
@@ -216,7 +218,16 @@ macro GetBeginBlank(linebuf)
     lineblanks = strmid(linebuf,0,ich)
     return lineblanks
 }
-
+macro GetEndBlankPos(linebuf)
+{
+    ich = strlen(linebuf) - 1
+    while (linebuf[ich] == " " || linebuf[ich] == "\t")
+    {
+        ich = ich - 1
+    }
+    ich = ich + 1
+    return ich
+}
 /*********************End Base Functions*********************/
 
 /*
@@ -781,8 +792,8 @@ macro MultiLineComment()
 {
     hwnd = GetCurrentWnd()
     sel = GetWndSel(hwnd)
-    LnFirst = GetWndSelLnFirst(hwnd)      //取首行行号
-    LnLast = GetWndSelLnLast(hwnd)      //取末行行号
+    lnFirst = GetWndSelLnFirst(hwnd)      //取首行行号
+    lnLast = GetWndSelLnLast(hwnd)      //取末行行号
     ichFirst = sel.ichFirst
     ichLim = sel.ichLim
     hbuf = GetCurrentBuf()
@@ -798,7 +809,7 @@ macro MultiLineComment()
         if( ichFirst+3 > len )
             break
 
-        if( strmid(buf,ichFirst,ichFirst+3) == "// " )
+        if( strmid(buf,ichFirst,ichFirst+2) == "//" )
         {
             line = line + 1
             continue
@@ -818,12 +829,17 @@ macro MultiLineComment()
             blanks = GetBeginBlank(buf)
             ichFirst = strlen(blanks)
             len = strlen(buf)
-            newbuf = strmid(buf, ichFirst+3,len)
+            if( buf[ichFirst+2] == " ")
+            {
+                ichFirst = ichFirst + 1
+            }
+            newbuf = strmid(buf, ichFirst+2,len)
             DelBufLine(hbuf,line)
             InsBufLine(hbuf,line,blanks # newbuf)
             line = line + 1
         }
         sel.ichFirst = ichFirst
+        if( )
         sel.ichLim = ichLim - 3
         sel.lnFirst = lnFirst
         sel.lnLast = lnLast
@@ -914,40 +930,12 @@ macro RunExe()
 
 }
 
-///\brief 添加函数头注释
-///\param in  
-///\param out 
-///\return 
-macro AddFuncHeader()
-{
-    SysTime = GetSysTime( 0 )
-    date    = StrMid( SysTime, 6, 19 )
- 
-    // Get a handle to the current file buffer and the name
-    // and location of the current symbol where the cursor is.
-    hbuf = GetCurrentBuf()
- 
-    if( hbuf == hNil )
-    {
-        return 1
-    }
- 
-    ln = GetBufLnCur( hbuf )
-    InsBufLine( hbuf, ln + 1, "///\\brief " )
-    InsBufLine( hbuf, ln + 2, "///\\param in " )
-    InsBufLine( hbuf, ln + 3, "///\\param out " )
-    InsBufLine( hbuf, ln + 4, "///\\return " )
- 
-    // put the insertion point inside the header comment
-    SetBufIns( hbuf, ln+1, 11 )
-}
-
 macro JumpCpp()
 {
     hwnd = GetCurrentWnd()
     hbuf = GetCurrentBuf()
     bufname = GetBufName(hbuf)
-    pos = strrstr(bufname,"\\",1)
+    pos = strrstr(bufname,"\\",2)
     //没有找到，则取全部字符串
     if( pos == -1 )
     {
@@ -993,3 +981,94 @@ macro JumpCpp()
         SetCurrentBuf(fbuf)
     }
 }
+
+///\brief 添加函数Doxygen注释
+///\param 空
+///\return 无
+macro AddFuncDoc()
+{
+    // Get a handle to the current file buffer and the name
+    // and location of the current symbol where the cursor is.
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+
+    buf = GetBufLine(hbuf,ln)
+    blanks = GetBeginBlank(buf)
+    InsBufLine( hbuf, ln, blanks # "/**" )
+    InsBufLine( hbuf, ln + 1, blanks # " * \@brief " )
+    InsBufLine( hbuf, ln + 2, blanks # " * \@param " )
+    InsBufLine( hbuf, ln + 3, blanks # " * \@return " )
+    InsBufLine( hbuf, ln + 4, blanks # " */" )
+ 
+    // put the insertion point inside the header comment
+    SetBufIns( hbuf, ln+1, strlen(blanks) + 10 )
+}
+
+macro AddDetailDoc()
+{
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+
+    buf = GetBufLine(hbuf,ln)
+    blanks = GetBeginBlank(buf)
+    ln = ln + 1;InsBufLine( hbuf, ln, blanks # "//! " )
+    line = ln
+    ln = ln + 1;InsBufLine( hbuf, ln, "" )
+    ln = ln + 1;InsBufLine( hbuf, ln, blanks # "//! " )
+    ln = ln + 1;InsBufLine( hbuf, ln, blanks # "//! " )
+ 
+    // put the insertion point inside the header comment
+    SetBufIns( hbuf, line, strlen(blanks) + 4 )
+}
+macro AddBreifDoc()
+{
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+
+    buf = GetBufLine(hbuf,ln)
+    blanks = GetBeginBlank(buf)
+    InsBufLine( hbuf, ln, blanks # "//! " )
+ 
+    // put the insertion point inside the header comment
+    SetBufIns( hbuf, ln, strlen(blanks) + 4 )
+}
+macro AddMemberDoc()
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+
+    buf = GetBufLine(hbuf,ln)
+    pos = GetEndBlankPos(buf) + 1
+
+    sel.ichFirst = pos
+    sel.ichLim = pos
+    SetWndSel(hwnd, sel)
+    //SetBufSelText(hbuf, "/**<  */")
+    SetBufSelText(hbuf, "///< ")
+    SetBufIns( hbuf, ln, pos + 5 )
+}
+macro AddFileHeaderDoc()
+{
+    hbuf = GetCurrentBuf()
+    ln = 0
+    InsBufLine( hbuf, ln,    "/*" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *  ********************************************************************************")
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *                                     Challenger" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *                          Digital Video Recoder xp" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *   (c) Copyright 1992-2004, ZheJiang Dahua Information Technology Stock CO.LTD." )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *                            All Rights Reserved" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *  File        : Challenger.cpp" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *  Description : " )
+    line = ln
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *  Create      : 2005/3/9      WHF     Create the file" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " *  ********************************************************************************" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    " */" )
+    ln = ln + 1;InsBufLine( hbuf, ln,    "" )
+
+    // put the insertion point inside the header comment
+    SetBufIns( hbuf, line, 20 )
+}
+

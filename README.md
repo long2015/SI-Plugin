@@ -17,5 +17,7 @@ InsertPoint	Ctrl+1
 5、svn相关
 log:Alt+h diff:Alt+d blame:Alt+b explorer:Alt+e
 6、doxyen
-函数头
+函数头、成员、详细注释、简要注释、文件头
 7、快捷启动Ctrl+Enter
+
+
