@@ -774,16 +774,16 @@ macro InsertFuncName()
 	}
     if( index == len)
     {
-        str = "trace(\"" # symbolname # ">>> \");"
+        str = "trace(\"" # symbolname # ">>> \\n\");"
     }
     else
     {
         classname = strmid(symbolname,0,index)
         funcname = strmid(symbolname,index+1,len)
-        str = "trace(\"" # classname # "::" # funcname # ">>> \");"
+        str = "trace(\"" # classname # "::" # funcname # ">>> \\n\");"
     }
     SetBufSelText(hbuf, str)
-    sel.ichFirst = sel.ichFirst + strlen(str) - 3
+    sel.ichFirst = sel.ichFirst + strlen(str) - 5
     sel.ichLim = sel.ichFirst
     SetWndSel(hwnd, sel)
 }
@@ -839,7 +839,6 @@ macro MultiLineComment()
             line = line + 1
         }
         sel.ichFirst = ichFirst
-        if( )
         sel.ichLim = ichLim - 3
         sel.lnFirst = lnFirst
         sel.lnLast = lnLast
