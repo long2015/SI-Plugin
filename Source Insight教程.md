@@ -13,17 +13,18 @@ Source Insight快捷键
 
 移动
 Ctrl+g
-退后一步 Alt+,  前一步 Alt+
-查到前一个 后一个 F3 F4
-行首 行尾 Ctrl+a Ctrl+e
-ctrl + shift + up       光标所在行与上行互换
-ctrl + shift + down     光标所在行与下行互换
-ctrl + [                减少当前行缩进
-ctrl + ]                增加当前行缩进
+Alt+,					退后一步
+Alt+.					前一步 
+F3 F4					查到前一个 后一个 
+Ctrl+a Ctrl+e			行首 行尾 
+Ctrl + Shift + up       光标所在行与上行互换
+Ctrl + Shift + down     光标所在行与下行互换
+Ctrl + [                减少当前行缩进
+Ctrl + ]                增加当前行缩进
 
 编辑
-复制粘贴撤销剪贴Ctrl+c v z x
-选择行 Ctrl + L
+Ctrl+c v z x			复制粘贴撤销剪贴
+Ctrl + L				选择行 
 复制行
 删除行 Ctrl+k Ctrl+shift+k
 删除到行首 Ctrl+Shift+Backspace
