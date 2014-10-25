@@ -49,10 +49,12 @@ ctrl + enter            插入新行(行后)
 Ctrl+n                  新建文件
 Ctrl+o                  打开文件
 
+###菜单功能
+关闭其他窗口
+
 ###一些设置
 关闭自动补全
 扩展tab： Expend tab
-
 
 
 PS：Sublime快捷键
