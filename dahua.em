@@ -393,9 +393,9 @@ macro tabCompletion()
             SetBufSelText(hbuf, "(  )")
         }
 
-		InsBufLine(hbuf, ln + 1, lnblanks # "{");
-		InsBufLine(hbuf, ln + 2, lnblanks # "    /* code */");
-		InsBufLine(hbuf, ln + 3, lnblanks # "}");
+        InsBufLine(hbuf, ln + 1, lnblanks # "{");
+        InsBufLine(hbuf, ln + 2, lnblanks # "    /* code */");
+        InsBufLine(hbuf, ln + 3, lnblanks # "}");
 
         sel.ichFirst = sel.ichFirst + 2
         sel.ichLim = sel.ichFirst
@@ -437,17 +437,17 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-	else if( cmd == "{" )
-	{
-		InsBufLine(hbuf, ln+1, lnblanks # "    ");
-		InsBufLine(hbuf, ln + 2, lnblanks # "}");
-		sel.lnFirst = ln + 1
-		sel.lnLast = sel.lnFirst
+    else if( cmd == "{" )
+    {
+        InsBufLine(hbuf, ln+1, lnblanks # "    ");
+        InsBufLine(hbuf, ln + 2, lnblanks # "}");
+        sel.lnFirst = ln + 1
+        sel.lnLast = sel.lnFirst
         sel.ichFirst = sel.ichFirst + 4
         sel.ichLim = sel.ichFirst
         SetWndSel(hwnd, sel)
         return
-	}
+    }
     else
     {
         //
@@ -832,14 +832,14 @@ macro InsertFuncName()
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
     symbolname = GetCurSymbol()
-	index = 0
-	len = strlen(symbolname)
-	while( index < len )
-	{
-		if( symbolname[index] == "." )
-			break
-		index = index + 1
-	}
+    index = 0
+    len = strlen(symbolname)
+    while( index < len )
+    {
+        if( symbolname[index] == "." )
+            break
+        index = index + 1
+    }
     if( index == len)
     {
         str = "trace(\"" # symbolname # ">>> \\n\");"
@@ -856,6 +856,7 @@ macro InsertFuncName()
     SetWndSel(hwnd, sel)
 }
 
+//多行注释与去注释功能
 macro MultiLineComment()
 {
     hwnd = GetCurrentWnd()
@@ -869,9 +870,7 @@ macro MultiLineComment()
     isComment = true      //默认注释过
 
     //先检查是否已注释过
-    //以及最左侧列
     line = lnFirst
-    minLeft = 9999     //最左侧非空字符
     while( line <= lnLast )
     {
         lineBuf = GetBufLine(hbuf,line)
@@ -879,7 +878,12 @@ macro MultiLineComment()
 
         szRight = TrimLeft(lineBuf)
         rightLen = strlen(szRight)
-        if(  rightLen < 2 )
+        if( rightLen == 0 )  //空行不处理
+        {
+            line = line + 1
+            continue
+        }
+        else if(  rightLen == 1 )
         {
             isComment = false
             break
@@ -901,12 +905,18 @@ macro MultiLineComment()
     {
         //去除注释
         line = lnFirst
+        lnFirstPos = 2 //第一行向左退2格
         while(line <= lnLast)
         {
             lineBuf = GetBufLine(hbuf,line)
             lineLen = strlen(lineBuf)
             szRight = TrimLeft(lineBuf)
             rightLen = strlen(szRight)
+            if( rightLen == 0 )  //空行不处理
+            {
+                line = line + 1
+                continue
+            }
 
             leftLen = lineLen - rightLen
             pos = leftLen + 2
@@ -914,6 +924,8 @@ macro MultiLineComment()
             if( rightLen > 2 && szRight[2] == " ")
             {
                 pos = pos + 1
+                if( line == lnFirst )
+                    lnFirstPos = lnFirstPos + 1
             }
             if( leftLen > 0 )
                 newbuf = newbuf # strmid(lineBuf, 0,leftLen)
@@ -923,27 +935,27 @@ macro MultiLineComment()
 
             line = line + 1
         }
-        sel.ichFirst = ichFirst
-        sel.ichLim = ichLim - 3
+        sel.ichFirst = ichFirst - lnFirstPos
+        sel.ichLim = ichLim - lnFirstPos
         SetWndSel(hwnd, sel)
     }
     else
     {
         //增加注释
+
+        //查找最左边的非空字符
         minFirst = 9999
         line = Lnfirst
         while( line <= lnLast )
         {
-            //查找最左边的非空字符
             lineBuf = GetBufLine(hbuf,line)
             lineLen = strlen(lineBuf)
             szRight = TrimLeft(lineBuf)
             rightLen = strlen(szRight)
-            if( rightLen == 0 )
+            if( rightLen == 0 )   //空行不处理
             {
-                //空行
-                minFirst = 0
-                break
+                line = line + 1
+                continue
             }
             if( lineLen - rightLen < minFirst )
             {
@@ -951,15 +963,19 @@ macro MultiLineComment()
             }
             line = line + 1
         }
+        //增加注释"// "
         line = lnFirst
         while( line <= lnLast )
         {
+            lineBuf = GetBufLine(hbuf,line)
+
             sel.ichFirst = minFirst
             sel.ichLim = minFirst
             sel.lnFirst = line
             sel.lnLast = line
             SetWndSel(hwnd, sel)
-            SetBufSelText(hbuf, "// ")
+            if( TrimLeft(lineBuf) != "" )
+                SetBufSelText(hbuf, "// ")
             line = line + 1
         }
         sel.ichFirst = ichFirst + 3
