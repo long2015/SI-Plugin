@@ -40,7 +40,7 @@
 */
 
 //返回 str1第n次出现的位置（正向）
-strstr(str,str1,n)
+macro strstr(str,str1,n)
 {
     len = strlen(str)
     len1 = strlen(str1)
@@ -131,7 +131,47 @@ macro TrimRight(szLine)
     }
     return strmid(szLine,0,nIdx+1)
 }
+macro GetLeftWord(ich, sz)
+{
+    wordinfo = "" // create a "wordinfo" structure
+    
+    chTab = CharFromAscii(9)
+    
+    // scan backwords over white space, if any
+    ich = ich - 1;
+    if (ich >= 0)
+        while (sz[ich] == " " || sz[ich] == chTab)
+        {
+            ich = ich - 1;
+            if (ich < 0)
+                break;
+        }
+    
+    // scan backwords to start of word    
+    ichLim = ich + 1;
+    asciiA = AsciiFromChar("A")
+    asciiZ = AsciiFromChar("Z")
+    while (ich >= 0)
+    {
+        ch = toupper(sz[ich])
+        asciiCh = AsciiFromChar(ch)
 
+        //只提取字符和# { / *作为命令
+        if ((asciiCh < asciiA || asciiCh > asciiZ) 
+           && !IsNumber(ch)
+           && ( ch != "#" && ch != "{" && ch != "/" && ch != "*"))
+            break;
+
+        ich = ich - 1;
+    }
+    
+    ich = ich + 1
+    wordinfo.key = strmid(sz, ich, ichLim)
+    wordinfo.ich = ich
+    wordinfo.ichLim = ichLim;
+    
+    return wordinfo
+}
 //
 macro GetLeftNoBlank(ich, linebuf)
 {
@@ -311,29 +351,46 @@ macro tabCompletion()
         stop
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
-    curLinebuf = GetBufLine(hbuf, sel.lnFirst);
-    curLineLen = strlen(curLinebuf)
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    linebufLen = strlen(linebuf)
 
-    if( CheckTab() == true )
+    if( sel.ichFirst != sel.ichLim || sel.lnFirst != sel.lnLast )
     {
-        //tab键
+        //选择模式,插入4个空格
+        oldSel = sel
+        line = oldSel.lnFirst
+        while( line <= oldSel.lnLast )
+        {
+            sel.ichFirst = 0
+            sel.ichLim = 0
+            sel.lnFirst = line
+            sel.lnLast = line
+            SetWndSel(hwnd, sel)
+            SetBufSelText(hbuf, "    ")
+            line = line + 1
+        }
+        //还原选中状态
+        oldSel.ichFirst = oldSel.ichFirst + 4
+        oldSel.ichLim = oldSel.ichLim + 4
+        SetWndSel(hwnd, oldSel)
+
         stop
     }
 
-    left = GetLeftNoBlank(sel.ichFirst, curLinebuf)
-    right = GetRightNoBlank(sel.ichFirst, curLinebuf)
-    begin = GetBeginNoBlank(sel.ichFirst, curLinebuf)
+    //补全模式
+    word = GetLeftWord(sel.ichFirst, linebuf)
 
-    cmd = left.name
-    lnblanks = GetBeginBlank(curLinebuf)
+    key = word.key
+    lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
     //先跳出
     if ( jumpOut()==true )
     {
         //跳出函数，后括号等
+        // 跳到"/* code */"处
         return
     }
-    else if (cmd == "inc" )
+    else if (key == "inc" )
     {
          sel.ichFirst = sel.ichFirst - 3
          SetWndSel(hwnd, sel)
@@ -343,7 +400,7 @@ macro tabCompletion()
          SetWndSel(hwnd, sel)
          return
     }
-    else if (cmd == "tra" )
+    else if (key == "tra" )
     {
          sel.ichFirst = sel.ichFirst - 3
          SetWndSel(hwnd, sel)
@@ -353,7 +410,7 @@ macro tabCompletion()
          SetWndSel(hwnd, sel)
          return
     }
-    else if( cmd == "pri" )
+    else if( key == "pri" )
     {
         SetBufSelText(hbuf, "ntf(\"\");")
         sel.ichFirst = sel.ichFirst + 5
@@ -361,7 +418,7 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-    else if( cmd == "main" )
+    else if( key == "main" )
     {
         sel.ichFirst = sel.ichFirst - 4
         ln = sel.lnFirst
@@ -379,9 +436,9 @@ macro tabCompletion()
         SetWndSel(hwnd,sel)
         return
     }
-    else if( cmd == "if" || cmd == "while" || cmd == "for" || cmd == "elif" )
+    else if( key == "if" || key == "while" || key == "for" || key == "elif" )
     {
-        if( cmd == "elif" )
+        if( key == "elif" )
         {
             sel.ichFirst = sel.ichFirst - 4
             SetWndSel(hwnd, sel)
@@ -403,7 +460,7 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-    else if( cmd == "else" || cmd == ")")
+    else if( key == "else" || key == ")")
     {
         linecur = GetBufLine(hbuf, ln);
         line1 = GetBufLine(hbuf, ln+1);
@@ -437,7 +494,7 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
-    else if( cmd == "{" )
+    else if( key == "{" )
     {
         InsBufLine(hbuf, ln+1, lnblanks # "    ");
         InsBufLine(hbuf, ln + 2, lnblanks # "}");
@@ -455,130 +512,62 @@ macro tabCompletion()
         return
     }
 }
-macro CheckTab()
-{
-    hwnd = GetCurrentWnd()
-    if (hwnd == 0)
-        stop
-    sel = GetWndSel(hwnd)
-    hbuf = GetWndBuf(hwnd)
-    curLinebuf = GetBufLine(hbuf, sel.lnFirst);
-    len = strlen(curLinebuf)
-
-    if( sel.ichFirst != sel.ichLim )
-    {
-        line = sel.lnFirst
-        lnFirst = sel.lnFirst
-        lnLast = sel.lnLast
-        ichFirst = sel.ichFirst
-        ichLim = sel.ichLim
-        while( line <= lnLast )
-        {
-            if(line == lnFirst )
-            {
-                sel.ichLim = ichFirst
-            }
-            else
-            {
-                sel.ichFirst = 0
-                sel.ichLim = 0
-            }
-            sel.lnFirst = line
-            sel.lnLast = line
-            SetWndSel(hwnd, sel)
-            SetBufSelText(hbuf, "    ")
-            line = line + 1
-        }
-        sel.lnFirst = lnFirst
-        sel.lnLast = lnLast
-        sel.ichFirst = ichFirst + 4
-        sel.ichLim = ichLim + 4
-        SetWndSel(hwnd, sel)
-
-        return true
-    }
-    else if( sel.ichFirst == 0 )
-    {
-        Tab
-        return true
-    }
-    else if( sel.ichFirst == len && (curLinebuf[sel.ichFirst-1] == " "
-            || curLinebuf[sel.ichFirst-1] == "\t") ) 
-    {
-        Tab
-        return true
-    }
-
-    return false
-}
 
 macro jumpOut()
 {
-    kuo = 1;
-    dou = 2;
-    mao = 4;
-
     hwnd = GetCurrentWnd()
     hbuf = GetWndBuf(hwnd)
     sel = GetWndSel(hwnd)
-    
-    szLine = GetBufLine(hbuf, sel.lnFirst);
-    lineLen = strlen(szLine)
-    index = sel.ichFirst
-    state = 0
-    blank = 0
-    while( index < lineLen )
-    {
-        c = szLine[index]
-        if( c == "\"" )
-        {
-            state = state + mao;
-        }
-        else if( c == ";" )
-        {
-            state = state + dou;
-        }
-        else if( c == ")" )
-        {
-           state = state + kuo;
-        }
-        else if( c == " " || c == "\t" )
-        {
-            blank = blank + 1
-        }
-        else
-        {
-            return false
-        }
-        index = index + 1
-    }
 
-    if( state == kuo )
+    linebuf = GetBufLine(hbuf, sel.lnFirst)
+    linebufLen = strlen(linebuf)
+    ichFirst = sel.ichFirst;
+
+
+    if( sel.ichFirst == linebufLen )
     {
-        sel.ichFirst = sel.ichFirst + 1
-    }
-    else if( state == mao + kuo + dou )
-    {
-        sel.ichFirst = sel.ichFirst + 1
-    }
-    else if( state == kuo + dou )
-    {
-        sel.ichFirst = sel.ichFirst + 2
-    }
-    else if( state == mao )
-    {
-        sel.ichFirst = sel.ichFirst + 1
+        //在行尾，跳转到code行
+        line = sel.lnFirst + 1
+        while( line <= sel.lnFirst + 2 )
+        {
+            linebuf = GetBufLine(hbuf, line)
+            pos = strstr(linebuf,"* code *",1)
+            if( pos != -1 )
+            {
+                sel.ichFirst = pos - 2
+                sel.ichLim = pos + 8
+                sel.lnFirst = line
+                sel.lnLast = line
+                SetWndSel(hwnd,sel)
+
+                return true
+            }
+            line = line + 1
+        }
     }
     else
     {
-        return false
+        //处理冒话、括号的跳出
+        right = strmid(linebuf,ichFirst,linebufLen)
+        gothere = 0
+        if( right == "\");" || right == ")" )
+        {
+            gothere = 1;
+        }
+        else if( right == ");" || right == " )" )
+        {
+            gothere = 2;
+        }
+
+        if( gothere != 0 )
+        {
+            sel.ichFirst = sel.ichFirst + gothere
+            sel.ichLim = sel.ichFirst
+            SetWndSel(hwnd,sel) 
+            return true
+        }
     }
-
-    sel.ichFirst = sel.ichFirst + blank
-    sel.ichLim = sel.ichFirst
-    SetWndSel(hwnd,sel) 
-
-    return true
+    return false
 }
 
 //跳转到行首 Ctrl + a
