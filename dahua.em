@@ -578,16 +578,19 @@ macro jumpLineStart()
         stop
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
-    szLine = GetBufLine(hbuf, sel.lnFirst);
-    index = 0
-    while( index < strlen(szLine) && (szLine[index] == " " || szLine[index] == "\t") )
-    {
-        index = index + 1;
-    }
-    sel.ichFirst = index
-    sel.ichLim = index
+    
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    right = TrimLeft(linebuf)
+    pos = strlen(linebuf) - strlen(right)
+    //如果当前位置已是最左端，则跳到0
+    if( pos == sel.ichFirst )
+        pos = 0
+
+    sel.ichFirst = pos
+    sel.ichLim = pos
     SetWndSel(hwnd, sel)
 }
+
 //跳转到行尾 Ctrl + e
 macro jumpLineEnd()
 {
@@ -596,15 +599,16 @@ macro jumpLineEnd()
         stop
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
-    szLine = GetBufLine(hbuf, sel.lnFirst);
-    index = strlen(szLine) - 1
-    while( index >= 0 && (szLine[index] == " " || szLine[index] == "\t") )
-    {
-        index = index - 1;
-    }
-    index = index + 1
-    sel.ichFirst = index
-    sel.ichLim = index
+
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    left = TrimRight(linebuf)
+    pos = strlen(left)
+    //如果当前位置已是最左端，则跳到0
+    if( pos == sel.ichFirst )
+        pos = strlen(linebuf)
+
+    sel.ichFirst = pos
+    sel.ichLim = pos
     SetWndSel(hwnd, sel)
 }
 macro IsWord(ch)
