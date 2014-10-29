@@ -35,10 +35,34 @@
 /*********************Start Base Functions*********************/
 
 /*
-* 基础函数：字符串处理，查找word
+* 基础函数：字符串处理，查找word、非空字符位置
 *
 */
 
+//返回 str1第n次出现的位置（正向）
+strstr(str,str1,n)
+{
+    len = strlen(str)
+    len1 = strlen(str1)
+    i = 0
+
+    times = 0
+    while( i < len - len1 )
+    {
+        strrmp = strmid(str,i,i+len1)
+        if( strrmp == str1 )
+        {
+            times = times + 1
+            if( times >= n )
+            {
+                return i+1;
+            }
+        }
+        i = i + 1;
+    }
+
+    return -1;
+}
 //返回 str1第n次出现的位置（逆向）
 macro strrstr(str,str1,n)
 {
@@ -62,6 +86,50 @@ macro strrstr(str,str1,n)
     }
 
     return -1;
+}
+
+macro TrimString(szLine)
+{
+    szLine = TrimLeft(szLine)
+    szLIne = TrimRight(szLine)
+    return szLine
+}
+
+macro TrimLeft(szLine)
+{
+    nLen = strlen(szLine)
+    if(nLen == 0)
+    {
+        return szLine
+    }
+    nIdx = 0
+    while( nIdx < nLen )
+    {
+        if( ( szLine[nIdx] != " ") && (szLine[nIdx] != "\t") )
+        {
+            break
+        }
+        nIdx = nIdx + 1
+    }
+    return strmid(szLine,nIdx,nLen)
+}
+macro TrimRight(szLine)
+{
+    nLen = strlen(szLine)
+    if(nLen == 0)
+    {
+        return szLine
+    }
+    nIdx = nLen
+    while( nIdx > 0 )
+    {
+        nIdx = nIdx - 1
+        if( ( szLine[nIdx] != " ") && (szLine[nIdx] != "\t") )
+        {
+            break
+        }
+    }
+    return strmid(szLine,0,nIdx+1)
 }
 
 //
@@ -798,95 +866,108 @@ macro MultiLineComment()
     ichLim = sel.ichLim
     hbuf = GetCurrentBuf()
 
+    isComment = true      //默认注释过
+
     //先检查是否已注释过
+    //以及最左侧列
     line = lnFirst
+    minLeft = 9999     //最左侧非空字符
     while( line <= lnLast )
     {
-        buf = GetBufLine(hbuf,line)
-        blanks = GetBeginBlank(buf)
-        ichFirst = strlen(blanks)
-        len = strlen(buf)
-        if( ichFirst+3 > len )
-            break
+        lineBuf = GetBufLine(hbuf,line)
+        lineLen = strlen(lineBuf)
 
-        if( strmid(buf,ichFirst,ichFirst+2) == "//" )
+        szRight = TrimLeft(lineBuf)
+        rightLen = strlen(szRight)
+        if(  rightLen < 2 )
+        {
+            isComment = false
+            break
+        }
+
+        if( strmid(szRight,0,2) == "//" )
         {
             line = line + 1
             continue
         }
         else
         {
+            isComment = false
             break
         }
     }
-    //去除注释
-    if( line == lnLast + 1 )
+
+    if( isComment )
     {
+        //去除注释
         line = lnFirst
         while(line <= lnLast)
         {
-            buf = GetBufLine(hbuf,line)
-            blanks = GetBeginBlank(buf)
-            ichFirst = strlen(blanks)
-            len = strlen(buf)
-            if( buf[ichFirst+2] == " ")
+            lineBuf = GetBufLine(hbuf,line)
+            lineLen = strlen(lineBuf)
+            szRight = TrimLeft(lineBuf)
+            rightLen = strlen(szRight)
+
+            leftLen = lineLen - rightLen
+            pos = leftLen + 2
+            newbuf = ""
+            if( rightLen > 2 && szRight[2] == " ")
             {
-                ichFirst = ichFirst + 1
+                pos = pos + 1
             }
-            newbuf = strmid(buf, ichFirst+2,len)
+            if( leftLen > 0 )
+                newbuf = newbuf # strmid(lineBuf, 0,leftLen)
+            newbuf = newbuf # strmid(lineBuf, pos,lineLen)
             DelBufLine(hbuf,line)
-            InsBufLine(hbuf,line,blanks # newbuf)
+            InsBufLine(hbuf,line,newbuf)
+
             line = line + 1
         }
         sel.ichFirst = ichFirst
         sel.ichLim = ichLim - 3
+        SetWndSel(hwnd, sel)
+    }
+    else
+    {
+        //增加注释
+        minFirst = 9999
+        line = Lnfirst
+        while( line <= lnLast )
+        {
+            //查找最左边的非空字符
+            lineBuf = GetBufLine(hbuf,line)
+            lineLen = strlen(lineBuf)
+            szRight = TrimLeft(lineBuf)
+            rightLen = strlen(szRight)
+            if( rightLen == 0 )
+            {
+                //空行
+                minFirst = 0
+                break
+            }
+            if( lineLen - rightLen < minFirst )
+            {
+                minFirst = lineLen - rightLen
+            }
+            line = line + 1
+        }
+        line = lnFirst
+        while( line <= lnLast )
+        {
+            sel.ichFirst = minFirst
+            sel.ichLim = minFirst
+            sel.lnFirst = line
+            sel.lnLast = line
+            SetWndSel(hwnd, sel)
+            SetBufSelText(hbuf, "// ")
+            line = line + 1
+        }
+        sel.ichFirst = ichFirst + 3
+        sel.ichLim = ichLim + 3
         sel.lnFirst = lnFirst
         sel.lnLast = lnLast
         SetWndSel(hwnd, sel)
-        SetWndSel(hwnd, sel)
-        return
     }
-
-    //增加注释
-    minFirst = 9999
-    line = Lnfirst
-    while( line <= lnLast )
-    {
-        buf = GetBufLine(hbuf, line)
-        len = strlen(buf)
-        index = 0
-        //查找最左边的非空字符
-        while( index <= len )
-        {
-            if( buf[index] != " " && buf[index] != "    ")
-            {
-                break
-            }
-            index = index + 1
-        }
-
-        if( index < minFirst )
-        {
-            minFirst = index
-        }
-        line = line + 1
-    }
-    line = lnFirst
-    while( line <= lnLast )
-    {
-        sel.ichFirst = minFirst
-        sel.ichLim = minFirst
-        sel.lnFirst = line
-        sel.lnLast = line
-        SetWndSel(hwnd, sel)
-        SetBufSelText(hbuf, "// ")
-        line = line + 1
-    }
-    sel.ichFirst = ichFirst + 3
-    sel.ichLim = ichLim + 3
-    sel.lnFirst = lnFirst
-    sel.lnLast = lnLast
-    SetWndSel(hwnd, sel)
 }
 
 macro blame()
