@@ -505,6 +505,10 @@ macro tabCompletion()
         SetWndSel(hwnd, sel)
         return
     }
+    // else if( CompleteWord() )
+    // {
+    //     return
+    // }
     else
     {
         //
@@ -512,7 +516,50 @@ macro tabCompletion()
         return
     }
 }
+macro BackspaceEx()
+{
+    hwnd = GetCurrentWnd()
+    hbuf = GetWndBuf(hwnd)
+    sel = GetWndSel(hwnd)
+    linebuf = GetBufLine(hbuf, sel.lnFirst)
 
+    if( sel.fExtended == 1 || sel.ichFirst == 0 || sel.ichFirst == strlen(linebuf) )
+    {
+        //删除多个字符
+        Backspace
+        Stop
+    }
+
+
+    a = linebuf[sel.ichFirst-1]
+    b = linebuf[sel.ichFirst]
+    c = linebuf[sel.ichFirst+1]
+
+    //匹配符号对
+    symbols = "\"\"''()<>{}[]"
+    len = strlen(symbols)
+    index = 0
+    while( index < len )
+    {
+        if( a == symbols[index] )
+        {
+            Backspace
+            if( b == symbols[index+1])
+                Delete_Character
+            else if( b == " " && c == symbols[index+1] )
+            {
+                Delete_Character
+                Delete_Character
+            }
+
+            Stop
+        }
+        index = index + 2
+    }
+
+    //删除一个字符
+    Backspace
+}
 macro jumpOut()
 {
     hwnd = GetCurrentWnd()
@@ -871,12 +918,7 @@ macro MultiLineComment()
 
         szRight = TrimLeft(lineBuf)
         rightLen = strlen(szRight)
-        if( rightLen == 0 )  //空行不处理
-        {
-            line = line + 1
-            continue
-        }
-        else if(  rightLen == 1 )
+        if(  rightLen < 2 )
         {
             isComment = false
             break
@@ -905,11 +947,6 @@ macro MultiLineComment()
             lineLen = strlen(lineBuf)
             szRight = TrimLeft(lineBuf)
             rightLen = strlen(szRight)
-            if( rightLen == 0 )  //空行不处理
-            {
-                line = line + 1
-                continue
-            }
 
             leftLen = lineLen - rightLen
             pos = leftLen + 2
@@ -947,8 +984,8 @@ macro MultiLineComment()
             rightLen = strlen(szRight)
             if( rightLen == 0 )   //空行不处理
             {
-                line = line + 1
-                continue
+                minFirst = 0
+                break
             }
             if( lineLen - rightLen < minFirst )
             {
@@ -967,8 +1004,8 @@ macro MultiLineComment()
             sel.lnFirst = line
             sel.lnLast = line
             SetWndSel(hwnd, sel)
-            if( TrimLeft(lineBuf) != "" )
-                SetBufSelText(hbuf, "// ")
+            SetBufSelText(hbuf, "// ")
+
             line = line + 1
         }
         sel.ichFirst = ichFirst + 3
@@ -1161,3 +1198,21 @@ macro AddFileHeaderDoc()
     SetBufIns( hbuf, line, 20 )
 }
 
+/*   C L O S E _   O T H E R S _   W I N D O W S   */
+/*-------------------------------------------------------------------------
+    Close all but the current window.  Leaves any other dirty 
+    file windows open too.
+-------------------------------------------------------------------------*/
+macro Close_Others_Windows()
+{
+    hCur = GetCurrentWnd();
+    hNext = GetNextWnd(hCur);
+    while (hNext != 0 && hCur != hNext)
+    {
+        hT = GetNextWnd(hNext);
+        hbuf = GetWndBuf(hNext);
+        if (!IsBufDirty(hbuf))
+            CloseBuf(hbuf)
+        hNext = hT;
+    }
+}

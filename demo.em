@@ -177,7 +177,7 @@ Notes:
 
 macro CompleteWord()
 {
-	CW_guts(1)
+	return CW_guts(1)
 }
 
 macro CompleteWordBack()
@@ -356,8 +356,7 @@ macro CW_guts(bForward)
 	}
 	i = i + 1
 	if (i >= j) {
-		Msg("Cursor must follow [a-zA-Z0-9_]")
-		stop
+		return false
 	}
 	/* BUG contra docs, line[j] is not included in the following */
 	word = strmid(line, i, j)
@@ -393,7 +392,7 @@ macro CW_guts(bForward)
 			/* found at least one completion in this buffer,
 			   so display the first */
 			CW_completeindex(hResultBuf, 1)
-			return
+			return true
 		}
 	}
 
@@ -408,13 +407,13 @@ macro CW_guts(bForward)
 			CW_completeword(hResultBuf, word, 0)
 			Msg("move forward for completions")
 		}
-		return
+		return true
 	}
 
 	/* moving forward */
 	if (i < n-1) {
 		CW_completeindex(hResultBuf, i + 1)
-		return
+		return true
 	}
 
 	if (i == n) {
@@ -479,7 +478,7 @@ macro CW_completeindex(hBuf, i)
 	record = GetBufLine(hBuf, i)
 	CW_completeword(hBuf, record.match, i)
 }
-CW_c
+
 /* Replace the stem with the given completion */
 macro CW_completeword(hBuf, completion, i)
 {
@@ -508,21 +507,3 @@ macro GetOrCreateBuf(name)
 	return hBuf
 }
 
-/*   C L O S E _   O T H E R S _   W I N D O W S   */
-/*-------------------------------------------------------------------------
-    Close all but the current window.  Leaves any other dirty 
-    file windows open too.
--------------------------------------------------------------------------*/
-macro Close_Others_Windows()
-{
-	hCur = GetCurrentWnd();
-	hNext = GetNextWnd(hCur);
-	while (hNext != 0 && hCur != hNext)
-	{
-		hT = GetNextWnd(hNext);
-		hbuf = GetWndBuf(hNext);
-		if (!IsBufDirty(hbuf))
-			CloseBuf(hbuf)
-		hNext = hT;
-	}
-}
