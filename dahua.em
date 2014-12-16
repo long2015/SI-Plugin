@@ -47,7 +47,7 @@ macro strstr(str,str1,n)
     i = 0
 
     times = 0
-    while( i < len - len1 )
+    while( i <= len - len1 )
     {
         strrmp = strmid(str,i,i+len1)
         if( strrmp == str1 )
@@ -71,7 +71,7 @@ macro strrstr(str,str1,n)
     i = len - len1
 
     times = 0
-    while( i > 0 )
+    while( i >= 0 )
     {
         strrmp = strmid(str,i,i+len1)
         if( strrmp == str1 )
@@ -1238,8 +1238,43 @@ macro Close_Others_Windows()
  */
 macro CopyWord_Str()
 {
-    Select_Word
-    Copy
+    hwnd = GetCurrentWnd()
+    Sel = GetWndSel(hwnd)
+
+    if( Sel.fExtended == false )
+    {
+        Select_Word
+    }
+    else
+    {
+        hbuf = GetCurrentBuf()
+        ln = GetBufLnCur( hbuf )
+        linebuf = GetBufLine(hbuf,ln)
+        len = strlen(linebuf)
+
+        if( Sel.ichFirst == 0 || Sel.ichLim == len )
+        {
+            return
+        }
+        else if( linebuf[Sel.ichFirst-1] == "\"" && linebuf[Sel.ichLim+1] == "\"" )
+        {
+            return
+        }
+        else
+        {
+            left = strmid(linebuf,0,Sel.ichFirst)
+            leftPos = strrstr(left,"\"", 1)
+            right = strmid(linebuf, Sel.ichLim, len)
+            rightPos = strstr(right,"\"", 1)
+            if( leftPos != -1 && rightPos != -1 )
+            {
+                Sel.ichFirst = leftPos
+                Sel.ichLim = Sel.ichLim + rightPos - 1
+                SetWndSel(hwnd,Sel)
+            }
+        }
+        Copy
+    }
 }
 macro DelWord()
 {
@@ -1285,6 +1320,8 @@ macro CopyPrevFilePath()
         SetBufSelText(hbuf, filepath)
         return
     }
+
+    SetBufSelText(hbuf,bufname)
 }
 
 
