@@ -177,7 +177,7 @@ Notes:
 
 macro CompleteWord()
 {
-	return CW_guts(1)
+	CW_guts(1)
 }
 
 macro CompleteWordBack()
@@ -356,7 +356,8 @@ macro CW_guts(bForward)
 	}
 	i = i + 1
 	if (i >= j) {
-		return false
+		Msg("Cursor must follow [a-zA-Z0-9_]")
+		stop
 	}
 	/* BUG contra docs, line[j] is not included in the following */
 	word = strmid(line, i, j)
@@ -392,7 +393,7 @@ macro CW_guts(bForward)
 			/* found at least one completion in this buffer,
 			   so display the first */
 			CW_completeindex(hResultBuf, 1)
-			return true
+			return
 		}
 	}
 
@@ -407,13 +408,13 @@ macro CW_guts(bForward)
 			CW_completeword(hResultBuf, word, 0)
 			Msg("move forward for completions")
 		}
-		return true
+		return
 	}
 
 	/* moving forward */
 	if (i < n-1) {
 		CW_completeindex(hResultBuf, i + 1)
-		return true
+		return
 	}
 
 	if (i == n) {

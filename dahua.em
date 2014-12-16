@@ -87,6 +87,21 @@ macro strrstr(str,str1,n)
 
     return -1;
 }
+macro strreplace(str, old,new)
+{
+    len = strlen(str)
+    i = 0
+    while( i < len )
+    {
+        if( str[i] == old )
+        {
+            str[i] = new
+        }
+        i = i + 1
+    }
+
+    return str
+}
 
 macro TrimString(szLine)
 {
@@ -1215,4 +1230,65 @@ macro Close_Others_Windows()
             CloseBuf(hbuf)
         hNext = hT;
     }
+}
+/**
+ * @brief Ñ¡ÖĞ¸´ÖÆ
+ * @details [long description]
+ * @return [description]
+ */
+macro CopyWord_Str()
+{
+    Select_Word
+    Copy
+}
+macro DelWord()
+{
+    Select_Word
+    Backspace
+}
+
+macro CopyPrevFilePath()
+{
+    hwnd = GetCurrentWnd()
+    hbuf = GetCurrentBuf()
+    hNext = GetNextWnd(hwnd)
+    nextBuf = GetWndBuf(hNext)
+    nextbufName = GetBufName(nextBuf)
+
+    bufname = strreplace(nextbufName,"\\", "/")
+    // Msg(bufname)
+
+    pos = strrstr(bufname,"Dahua3.0",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+8,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+
+    pos = strrstr(bufname,"HeadFiles",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+9,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+
+    //
+    pos = strrstr(bufname,"Include",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+7,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+}
+
+
+macro CopyFileFullPath()
+{
+
 }
