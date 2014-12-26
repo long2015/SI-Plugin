@@ -47,7 +47,7 @@ macro strstr(str,str1,n)
     i = 0
 
     times = 0
-    while( i < len - len1 )
+    while( i <= len - len1 )
     {
         strrmp = strmid(str,i,i+len1)
         if( strrmp == str1 )
@@ -71,7 +71,7 @@ macro strrstr(str,str1,n)
     i = len - len1
 
     times = 0
-    while( i > 0 )
+    while( i >= 0 )
     {
         strrmp = strmid(str,i,i+len1)
         if( strrmp == str1 )
@@ -86,6 +86,21 @@ macro strrstr(str,str1,n)
     }
 
     return -1;
+}
+macro strreplace(str, old,new)
+{
+    len = strlen(str)
+    i = 0
+    while( i < len )
+    {
+        if( str[i] == old )
+        {
+            str[i] = new
+        }
+        i = i + 1
+    }
+
+    return str
 }
 
 macro TrimString(szLine)
@@ -846,6 +861,69 @@ macro GoDown5()
     SetWndSel(hwnd,sel)
 }
 
+////////////////////////////////////////////////////////
+//////////////////////// VimMode ///////////////////////
+macro FindInLine()
+{
+    hWnd = GetCurrentWnd()
+    sel = GetWndSel(hWnd)
+
+    hbuf = GetCurrentBuf();
+    ln = GetBufLnCur( hbuf )
+    linebuf = GetBufLine(hbuf,ln)
+
+    key = GetKey()
+    ch = CharFromKey(key)
+    ch = toupper(ch)
+
+    index = sel.ichFirst
+    len = strlen(linebuf)
+    while( index < len )
+    {
+        if( toupper(linebuf[index]) == ch )
+            break
+
+        index = index + 1
+    }
+
+    if( index < len )
+    {
+        sel.ichFirst = index
+        sel.ichLim = sel.ichFirst
+        SetWndSel(hWnd, sel)
+    }
+}
+
+macro VimMode()
+{
+    hbuf = GetCurrentBuf();
+    while(1)
+    {
+        // Wait for the next key press and return the key code.
+        key = GetKey()
+        
+        // Map the key code into a simple character.
+        //
+        // If you only need a simple character, you can 
+        // call GetChar() instead of GetKey + CharFromKey
+        ch = CharFromKey(key)
+        
+        //光标移动
+        if( ch == "h" )
+            Cursor_Left
+        else if( ch == "j" )
+            Cursor_Down
+        else if( ch == "k" )
+            Cursor_Up
+        else if( ch == "l" )
+            Cursor_Right
+        else if( ch == "f" )
+            FindInLine
+        else
+            stop
+    }
+}
+
 macro InsertPoint()
 {
     hwnd = GetCurrentWnd()
@@ -1215,4 +1293,1115 @@ macro Close_Others_Windows()
             CloseBuf(hbuf)
         hNext = hT;
     }
+}
+
+/**
+ * @brief 选中复制
+ * @details [long description]
+ * @return [description]
+ */
+macro CopyWord_Str()
+{
+    hwnd = GetCurrentWnd()
+    Sel = GetWndSel(hwnd)
+
+    //选择单词或者字符串
+    if( Sel.fExtended == false )
+    {
+        Select_Word
+    }
+    else
+    {
+        hbuf = GetCurrentBuf()
+        ln = GetBufLnCur( hbuf )
+        linebuf = GetBufLine(hbuf,ln)
+        len = strlen(linebuf)
+
+        if( Sel.ichFirst == 0 || Sel.ichLim == len )
+        {
+            return
+        }
+        else if( linebuf[Sel.ichFirst-1] == "\"" && linebuf[Sel.ichLim+1] == "\"" )
+        {
+            return
+        }
+        else
+        {
+            // left = strmid(linebuf,0,Sel.ichFirst)
+            // leftPos = -1
+            // while( left != "" )
+            // {
+            //     leftPos = strrstr(left,"\"", 1)
+            //     if( leftPos == 0 )
+            //         break
+            //     else if( left[leftPos-1] == "\\" )
+            //     {
+            //         left = strmid(left,0,leftPos)
+            //         leftPos = -1
+            //     }
+            //     else
+            //         break
+            // }
+            // right = strmid(linebuf, Sel.ichLim, len)
+            // rightPos = -1
+            // while( right != "" )
+            // {
+            //     rightPos = strstr(right,"\"", 1)
+            //     if( leftPos == 0 )
+            //         break
+            //     else if( right[rightPos+1] == "\\" )
+            //     {
+            //         right = strmid(right,rightPos,strlen(right))
+            //         rightPos = -1
+            //     }
+            //     else
+            //         break
+            // }
+            left = strmid(linebuf,0,Sel.ichFirst)
+            leftPos = strrstr(left,"\"", 1)
+            right = strmid(linebuf, Sel.ichLim, len)
+            rightPos = strstr(right,"\"", 1)
+            if( leftPos != -1 && rightPos != -1 )
+            {
+                Sel.ichFirst = leftPos
+                Sel.ichLim = Sel.ichLim + rightPos - 1
+                SetWndSel(hwnd,Sel)
+            }
+        }
+    }
+    //复制
+    Copy
+}
+macro CopyLine_ToNext()
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    ichFirst = sel.ichFirst
+
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+    linebuf = GetBufLine(hbuf,ln)
+
+    InsBufLine (hbuf, ln+1, linebuf);
+    
+    sel.lnFirst = ln+1
+    sel.lnLast = sel.lnFirst
+    SetWndSel(hwnd,sel)
+}
+
+macro Delword_or_Copy()
+{
+    Select_Word
+    Paste
+}
+
+macro OpenBaseProj()
+{
+    OpenProj("\\\\10.30.21.200\\UserDesktop01\\17417\\MyDoc\\Source Insight\\Projects\\Base\\Base")
+}
+
+
+macro JumpBlock()
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetCurrentBuf()
+    ln = GetBufLnCur( hbuf )
+    linebuf = GetBufLine(hbuf,ln)
+    len = strlen(lineBuf)
+
+    // Msg(linebuf)
+
+    if( sel.ichFirst < len && linebuf[sel.ichFirst] != "}" )
+    {
+        Block_Down
+    }
+    else
+    {
+        Block_Up
+    }
+}
+macro SelectBlockEx()
+{
+    Select_Block
+}
+macro CopyPrevFilePath()
+{
+    hwnd = GetCurrentWnd()
+    hbuf = GetCurrentBuf()
+    hNext = GetNextWnd(hwnd)
+    nextBuf = GetWndBuf(hNext)
+    nextbufName = GetBufName(nextBuf)
+
+    bufname = strreplace(nextbufName,"\\", "/")
+    // Msg(bufname)
+
+    pos = strrstr(bufname,"Dahua3.0",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+8,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+
+    pos = strrstr(bufname,"HeadFiles",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+9,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+
+    //
+    pos = strrstr(bufname,"Include",1)
+    if( pos != -1 )
+    {
+        filepath = strmid(bufname,pos+7,strlen(bufname))
+        // Msg(filepath)
+        SetBufSelText(hbuf, filepath)
+        return
+    }
+
+    SetBufSelText(hbuf,bufname)
+}
+
+
+macro CopyFileFullPath()
+{
+
+}
+
+
+/****************************************************************************
+ *  Ver:    1.13
+ *  Date:   2002.9.18
+ *  Author: suqiyuan
+ * ================================
+ * 这里有几个宏可以用来部分支持汉字:
+ * 使用这些宏重载对应的键就可以了
+ *
+ * 重载关系如下:
+ * EM_delete:            DELETE
+ * EM_backspace:         BACKSPACE
+ * EM_CursorUp:          ↑（上方向键）
+ * EM_CursorDown:        ↓（下方向键）
+ * EM_CursorLeft:        ←（左方向键）
+ * EM_CursorRight:       →（右方向键）
+ * EM_SelectWordLeft:    Shift + ←
+ * EM_SelectWordRight:   Shift + →
+ * EM_SelectLineUp:      Shift + ↑
+ * EM_SelectLineUp:      Shift + ↓
+ ****************************************************************************/
+ 
+ //For keyboard delete
+ Macro EM_delete()
+ {
+    //get current character
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    ln      = GetWndSelLnFirst(hWnd)
+    lnLast  = GetWndSelLnLast(hWnd)
+    lnCnt   = lnLast - ln + 1
+    sel     = GetWndSel(hWnd)
+    ich     = GetWndSelIchFirst(hWnd)
+    ichLim = GetWndSelIchLim(hWnd)
+    hBuf    = GetWndBuf(hWnd)
+    curLine = GetBufLine(hBuf,ln)
+
+    //Msg("Now Select lines:@lnCnt@,Line @ln@ index @ich@ to line @lnLast@ index @ichLim@")
+    if((lnCnt > 1) || ((lnCnt==1)&&(ichLim>ich)))//选择的是块
+    {
+        //Msg("Selection is One BLOCK.")
+        curLine = GetBufLine(hBuf,ln)
+        if(ich>0)
+        {
+            index = 0
+            while(index < ich)
+            {
+                ch = curLine[index]
+                if(SearchCharInTab(ch))
+                    index = index + 1
+                else
+                    index = index + 2
+            }
+            //如果块首在汉字中间，块首向前调整一个字节
+            sel.ichFirst = ich - (index-ich)
+        }
+        curLine = GetBufLine(hBuf,lnLast)
+        len     = GetBufLineLength(hBuf,lnLast)
+        index   = 0
+        while(index < ichLim && index < len)
+        {
+            ch = curLine[index]
+            if(SearchCharInTab(ch))
+                index = index + 1
+            else
+                index = index + 2
+        }
+        sel.ichLim = index
+        if(ichLim>len)
+            sel.ichLim = ichLim
+        SetWndSel(hWnd,sel)
+        //Msg("See the block selected is adjusted now.")
+        Delete_Character
+    }
+    else//选择的不是块
+    {
+        //Msg("Selection NOT block.")
+        curChar = curLine[ich]
+        //如果在行末,应该能够使得下一行连到行尾
+        if(ich == strlen(curLine))
+        {
+            Delete_Character
+            stop
+        }
+        //Msg("Not at the end of line.")
+        flag    = SearchCharInTab(curChar)
+        //Msg("Current char:@curChar@,Valid flag:@flag@")
+        if(flag)
+        {
+            //Msg("Byte location to delete:@ich@,Current char:@curChar@")
+            DelCharOfLine(hWnd,ln,ich,1)
+        }
+        else
+        {
+            /*这里的实现方法是这样的:从行首开始找,如果是Table中的,加一继续
+             *如果不是,加二继续,一直到当前字符,决定怎么删除
+             *这里有这样的假定,当前行没有半个汉字的情形
+             */
+            index = 0
+            word  = 0
+            byte  = 0
+            len   = strlen(curLine)
+            while(index < ich)
+            {
+                ch   = curLine[index]
+                flag = SearchCharInTab(ch)
+                if(flag)
+                {
+                    index = index + 1
+                    byte  = byte + 1
+                }
+                else
+                {
+                    index = index + 2
+                    word  = word + 1
+                }
+            }
+            //index = ich + 1,current cursor is in the middle of word
+            //                or in the front of byte
+            //index = ich,current cursor is NOT in the front of word
+            nich = 2*(word-(index-ich)) + byte
+            //Msg("Start deleting position:@ich@,word:@word@,byte:@byte@")
+            DelCharOfLine(hWnd,ln,nich,2)
+            if((index-ich) && !flag && (ich != len-1))//当在一个不在末尾的汉字中间
+                Cursor_Left
+        }
+    }
+}
+
+//For keyboard backspace <-
+Macro EM_backspace()
+{
+    //get current character
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    sel     = GetWndSel(hWnd)
+    ln      = sel.lnFirst
+    ich     = sel.ichFirst
+    if(ich < 0)
+        stop
+    lnLast  = GetWndSelLnLast(hWnd)
+    lnCnt   = lnLast - ln + 1
+    ichLim = GetWndSelIchLim(hWnd)
+
+    //Msg("Now Select lines:@lnCnt@,Line @ln@ index @ich@ to line @lnLast@ index @ichLim@")
+    if((lnCnt > 1) || ((lnCnt==1)&&(ichLim>ich)))//选择的是块,直接删除调整后的块
+    {
+        EM_delete
+    }
+    else
+        {if(ich == 0)
+        {
+            Backspace
+            stop
+        }
+        hBuf    = GetWndBuf(hWnd)
+        curLine = GetBufLine(hBuf,ln)
+
+        index = 0
+        flag  = 0  // 1-byte,0-word
+        byte = 0
+        word = 0
+        while(index < ich)
+        {
+            ch   = curLine[index]
+            flag = SearchCharInTab(ch)
+            if(flag)
+                {
+                    byte  = byte + 1
+                    index = index + 1
+                }
+            else
+                {
+                    word  = word + 1
+                    index = index + 2
+                }
+        }
+        if(flag)//char before cursor is in table
+        {
+            //Msg("char before cursor is in table,byte!")
+            Backspace
+        }
+        else if(!flag && (index-ich))//current cursor is in the middle of word
+        {
+            //Msg("current cursor is in the middle of word.")
+            DelCharOfLine(hWnd,ln,ich-1,2)
+            if(!(sel.ichFirst == strlen(curLine)-1))
+                Cursor_Left
+        }
+        else if(!flag && !(index-ich))//Current cursor is after a word
+        {
+            //Msg("Current cursor is after a word.")
+            DelCharOfLine(hWnd,ln,ich-2,2)
+            if(sel.ichFirst != strlen(curLine))
+            {
+                Cursor_Left
+                Cursor_Left
+            }
+        }
+    }
+}
+
+Macro SearchCharInTab(curChar)
+{
+     /* Total 97 chars */
+    AsciiChar = AsciiFromChar(curChar)
+    //Msg("Current char in SearchCharInTab():@curChar@.")
+    if(AsciiChar >= 32 && AsciiChar <= 126)
+        return 1
+    //Msg("Current Char(@curChar@) NOT between space and ~")
+    if(AsciiChar == 9)//Tab
+        return 1
+    //Msg("Current Char(@curChar@) NOT Tab")
+    if(AsciiChar == 13)//CR
+        return 1
+    //Msg("Current Char(@curChar@) Not CR")
+    return 0
+}
+
+Macro DelCharOfLine(hWnd,ln,ich,count)
+{
+    if(hWnd == 0)
+        stop
+    sel     = GetWndSel(hWnd)
+    hBuf    = GetWndBuf(hWnd)
+    if(hBuf == 0)
+        stop
+    if(ln > GetBufLineCount(hBuf))
+        stop
+    szLine = GetBufLine(hBuf,ln)
+    len    = strlen(szLine)
+    if(ich >  len)
+        stop
+
+    NewLine = ""
+    if(ich > 0)
+    {
+        NewLine = NewLine # strmid(szLine,0,ich)
+    }
+    if(ich+count < len)
+    {
+        ichLim = len
+        NewLine = NewLine # strmid(szLine,ich+count,ichLim)
+    }
+    /**/
+    //Msg("Current line:@szLine@")
+    //Msg("Replaced as:@NewLine@")
+    /**/
+    PutBufLine(hBuf,ln,NewLine)
+    SetWndSel(hWnd, sel)
+}
+
+
+//上移光标
+macro EM_CursorUp()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+
+    hbuf = GetCurrentBuf()
+
+    //移动光标
+    Cursor_Up
+
+    //检查移动光标后的光标位置
+    hwnd = GetWndhandle(hbuf)
+    sel = GetWndSel(hwnd)
+    str = GetBufline(hbuf, sel.lnFirst)
+
+    flag = StrChinChk(str, sel.ichFirst)
+    //光标位于中文字符之中则向前移动一个字符
+    if (flag == True)
+    {
+        Cursor_Left
+    }
+}
+
+//下移光标
+macro EM_CursorDown()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+
+    hbuf = GetCurrentBuf()
+
+    //移动光标
+    Cursor_Down
+
+    //检查移动光标后的光标位置
+    hwnd = GetWndhandle(hbuf)
+    sel = GetWndSel(hwnd)
+    str = GetBufline(hbuf, sel.lnFirst)
+
+    flag = StrChinChk(str, sel.ichFirst)
+    //光标位于中文字符之中则向前移动一个字符
+    if (flag == True)
+    {
+        Cursor_Right
+    }
+}
+
+
+//右移光标
+macro EM_CursorRight()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+
+    hbuf = GetCurrentBuf()
+
+    //移动光标
+    Cursor_Right
+
+    //检查移动光标后的光标位置
+    hwnd = GetWndhandle(hbuf)
+    sel = GetWndSel(hwnd)
+    str = GetBufline(hbuf, sel.lnFirst)
+
+    flag = StrChinChk(str, sel.ichFirst)
+    //光标位于中文字符之中则向前移动一个字符(向后移时是再向后移动一个字符)
+    if (flag == True)
+    {
+        Cursor_Right
+    }
+}
+
+//左移光标
+macro EM_CursorLeft()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+
+    hbuf = GetCurrentBuf()
+
+    //移动光标
+    Cursor_Left
+
+    //检查移动光标后的光标位置
+    hwnd = GetWndhandle(hbuf)
+    sel = GetWndSel(hwnd)
+    str = GetBufline(hbuf, sel.lnFirst)
+
+    flag = StrChinChk(str, sel.ichFirst)
+    //光标位于中文字符之中则向前移动一个字符(向后移时是再向后移动一个字符)
+    if (flag == True)
+    {
+        Cursor_Left
+    }
+}
+
+//向左选择字符
+macro EM_SelectWordLeft()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    hbuf = GetCurrentBuf()
+
+    //执行命令
+    Select_Char_Left
+
+    hwnd = GetWndhandle(hbuf)
+    //selold = GetWndSel(hwnd)
+    sel = GetWndSel(hwnd)
+    //ln = GetBufLnCur(hbuf)
+
+    /*
+    if (selold.ichFirst == sel.ichFirst && sel.lnFirst == selold.lnFirst)
+        curinhead = 1
+    else
+        curinhead = 0
+    */
+    str = GetBufline(hbuf, sel.lnFirst)
+    hdflag = StrChinChk(str, sel.ichFirst)
+
+    str = GetBufline(hbuf, sel.lnLast)
+    bkflag = StrChinChk(str, sel.ichLim)
+
+    if (hdflag == TRUE || bkflag == TRUE)
+    {
+        Select_Char_Left
+    }
+}
+
+//向右选择字符
+macro EM_SelectWordRight()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    hbuf = GetCurrentBuf()
+
+    //执行命令
+    Select_Char_Right
+
+    hwnd = GetWndhandle(hbuf)
+    //selold = GetWndSel(hwnd)
+    sel = GetWndSel(hwnd)
+    //ln = GetBufLnCur(hbuf)
+
+    /*
+    if (selold.ichFirst == sel.ichFirst && sel.lnFirst == selold.lnFirst)
+        curinhead = 1
+    else
+        curinhead = 0
+    */
+    str = GetBufline(hbuf, sel.lnFirst)
+    hdflag = StrChinChk(str, sel.ichFirst)
+
+    str = GetBufline(hbuf, sel.lnLast)
+    bkflag = StrChinChk(str, sel.ichLim)
+
+    if (hdflag == TRUE || bkflag == TRUE)
+    {
+        Select_Char_Right
+    }
+}
+
+//向上选择字符
+macro EM_SelectLineUp()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    hbuf = GetCurrentBuf()
+
+    //执行命令
+    Select_Line_Up
+
+    hwnd = GetWndhandle(hbuf)
+    //selold = GetWndSel(hwnd)
+    sel = GetWndSel(hwnd)
+    //ln = GetBufLnCur(hbuf)
+
+    /*
+    if (selold.ichFirst == sel.ichFirst && sel.lnFirst == selold.lnFirst)
+        curinhead = 1
+    else
+        curinhead = 0
+    */
+    str = GetBufline(hbuf, sel.lnFirst)
+    hdflag = StrChinChk(str, sel.ichFirst)
+
+    str = GetBufline(hbuf, sel.lnLast)
+    bkflag = StrChinChk(str, sel.ichLim)
+
+    if (hdflag == TRUE || bkflag == TRUE)
+    {
+        Select_Char_Right
+    }
+}
+
+//向下选择字符
+macro EM_SelectLineDown()
+{
+    hWnd = GetCurrentWnd()
+    if(hWnd == 0)
+        stop
+    hbuf = GetCurrentBuf()
+
+    //执行命令
+    Select_Line_Down
+
+    hwnd = GetWndhandle(hbuf)
+    //selold = GetWndSel(hwnd)
+    sel = GetWndSel(hwnd)
+    //ln = GetBufLnCur(hbuf)
+
+    /*
+    if (selold.ichFirst == sel.ichFirst && sel.lnFirst == selold.lnFirst)
+        curinhead = 1
+    else
+        curinhead = 0
+    */
+    str = GetBufline(hbuf, sel.lnFirst)
+    hdflag = StrChinChk(str, sel.ichFirst)
+
+    str = GetBufline(hbuf, sel.lnLast)
+    bkflag = StrChinChk(str, sel.ichLim)
+
+    if (hdflag == TRUE || bkflag == TRUE)
+    {
+        Select_Char_Right
+    }
+}
+
+//对字符串str到ln位进行检查
+//如果有偶数个中文字符则返回FALSE
+//如果是奇数个中文字符则返回TRUE
+macro StrChinChk(str, ln)
+{
+    tm  = 0
+    flag = False
+    len  = strlen(str)
+    while (tm < ln)
+    {
+        if (str[tm] != "")
+            ascstr = asciifromchar(str[tm])
+        else
+            ascstr = 0
+
+        //中文字符ASCII > 128
+        if (ascstr > 128)
+            flag = !flag
+
+        tm = tm + 1
+        if (tm >= len)
+            break
+    }
+    return flag
+}
+
+// 在工程中查找半个汉字,依赖"macro OpenorNewBuf(szfile)"
+macro FindHalfChcharInProj()
+{
+    hprj = GetCurrentProj()
+    if (hprj == 0)
+        stop
+    ifileMax = GetProjFileCount(hprj)
+    
+    hOutBuf = OpenorNewBuf("HalfChch.txt")
+    if (hOutBuf == hNil)
+    {
+        Msg("Can't Open file:HalfChchar.txt")
+        stop
+    }
+    AppendBufLine(hOutBuf, ">>半个汉字列表>>")
+    
+    ifile = 0
+    while (ifile < ifileMax)
+    {
+        filename = GetProjFileName(hprj, ifile)
+        hbuf = OpenBuf(filename)
+        if (hbuf != 0)
+        {
+            StartMsg("@filename@ is being processing. . . press ESC to cancel.")
+            iTotalLn = GetBufLineCount(hbuf)
+            iCurLn = 0
+            while (iCurLn < iTotalLn)
+            {
+                str = GetBufline(hbuf, iCurLn)
+                flag = StrChinChk(str, strlen(str))
+                if (flag == True)
+                {
+                    // 存在半个汉字,记录文件名和行号
+                    iOutLn = iCurLn + 1
+                    outstr = cat(filename, "(@iOutLn@) : ")
+                    outstr = cat(outstr, str)
+                    AppendBufLine(hOutBuf, outstr)
+                    SetSourceLink(hOutBuf,GetBufLineCount(hOutBuf)-1,filename,iCurLn)
+                }
+                iCurLn = iCurLn + 1
+            }
+            EndMsg()
+        }
+        ifile = ifile + 1
+    }
+    //SetCurrentBuf(hOutBuf)
+    //Go_To_First_Link
+}
+
+// 如果没有szfile指明的文件打开,则新建,否则打开,并返回BUFF句柄
+macro OpenorNewBuf(szfile)
+{
+    hout = GetBufHandle(szfile)
+    if (hout == hNil)
+    {
+        hout = OpenBuf(szfile)
+        if (hout == hNil)
+        {
+            hout = NewBuf(szfile)
+            NewWnd(hout)
+        }
+    }
+    return hout
+}
+
+macro checkEnv()
+{
+		//版本判断,3.5056以下程序不支持
+		ProVer = GetProgramInfo ();
+		if(ProVer.versionMinor < 50 || ProVer.versionBuild < 56)
+		{
+			Msg("您的Source Insight版本太低，如需使用此工具，请安装3.50.0060及以上版。");
+			stop
+		}
+		
+		initGlobal();//初始化全局变量
+		
+		hProj = GetCurrentProj ();
+		dir_proj = GetProjDir (hProj);
+
+		//寻找代码目录
+		depend_file = cat(dir_proj, "\\Build\\depend");
+		
+		//depend文件不存在,说明代码和source insight工程不在一个文件夹，则询问
+		if(0 == ifExist(depend_file) )
+		{	
+			dir_proj = searchDir();
+		}
+		
+		if(-1 == dir_proj )
+		{
+			dir_proj = Ask("请输入当前工程的代码目录，如'D:\\Code\\P_2011.05.04_XQ_2.608'，最后无斜杠。");
+		}
+
+		//根据宏名列表文件,清除已经存在的环境变量
+		con_file = cat(dir_proj, "\\clsList");
+		clearCondition(hProj,con_file);
+		//syncProj (hProj);
+		Msg("当前已清理已有的宏，恢复了默认状态。要继续设置环境，请点击确定；如果您想恢复默认，请点取消或者右上角的'X'按钮。");		
+		
+		//向depend文件写入命令		
+		depend_file = cat(dir_proj, "\\Build\\depend");
+		cmd_count = writeDependFile(depend_file)
+		
+		//向depend_ti文件写入命令
+		depend_file = cat(dir_proj, "\\Build\\depend_ti");
+		writeDependFile(depend_file)
+
+		modiFile();
+		
+		Msg("请先编译您的工程，编译完后再按确定!");
+
+		//向工程添加环境变量
+		con_file = cat(dir_proj, "\\define");
+		addCondition(hProj,con_file);
+
+		//从depend文件中清除linux命令
+		depend_file = cat(dir_proj, "\\Build\\depend");
+		ln = lineOfFile(depend_file, GetEnv("cmd_str0"));
+		deleteCommand(depend_file, ln, cmd_count);
+
+		depend_file = cat(dir_proj, "\\Build\\depend_ti");
+		ln = lineOfFile(depend_file, GetEnv("cmd_str0"));
+		deleteCommand(depend_file, ln, cmd_count);
+
+		con_file = cat(dir_proj, "\\define");
+		if(0 != ifExist(con_file))
+		{
+			//syncProj (hProj);
+						
+			Msg("环境变量已经设定。");			
+		}
+		else
+		{
+			Msg("您是否未编译、或者代码路径有误、又或者没有编译时__make:Nothing to be done for 'all'?如果是，请更改文件后重新操作。");
+		}
+		
+		//清理中间文件,避免对下次产生干扰,但保留clsList，用于清理环境变量			
+		com_str = cat("cmd /C \"del ",cat(dir_proj, "\\clsList\""));
+		RunCmdLine (com_str, dir_proj, 1);		
+		
+		com_str = cat("cmd /C \"ren ",cat(dir_proj, "\\define clsList\""));
+		RunCmdLine (com_str, dir_proj, 1);
+}
+
+//取行的名称,例如取"version=2.6"中的"version",如果不含等号，则返回原字符串。
+macro nameOf(str)
+{
+	pos=0;
+	while(pos<strlen (str))
+	{
+		if(strmid (str,pos, pos+1) == "=")
+			break;
+		pos = pos + 1;
+	}
+	return strmid (str,0,pos);
+}
+
+//取等式的值,例如取"version=2.6"中的"2.6"，如果不含等号，则返回"0"
+macro valueOf(str)
+{
+	pos=0;
+	while(pos<strlen (str))
+	{
+		if(strmid (str,pos, pos+1) == "=")
+			break;
+		pos = pos + 1;
+	}
+
+	if(strlen(str) == pos)
+		return "0";
+	else
+		return strmid (str,pos+1,strlen (str));
+}
+
+//判断文件是否存在,0代表不存在,1代表存在
+macro ifExist(file)
+{
+	hbuf = OpenBuf(file);
+	if(0 == hbuf )
+	{
+		return 0;
+	}
+	else
+	{
+		CloseBuf(hbuf);
+		return 1;
+	}
+}
+
+//返回特定内容在文件中的行序号
+macro lineOfFile(file, str)
+{
+	if(0 == ifExist(file))
+	{
+		return 0;
+	}
+	else
+	{
+		hbuf = OpenBuf (file);
+		ln_cnt = GetBufLineCount(hbuf);
+		ln = 0;	
+		while(ln<ln_cnt)
+		{
+			if(str == GetBufLine (hbuf, ln))
+				return ln;
+				
+			ln = ln + 1;
+		}
+		CloseBuf (hbuf);		
+		return 0;
+
+	}
+}
+
+//把要写进depend文件的命令写入系统的环境变量里，
+//当做全局变量使用,便于以后更改程序
+macro initGlobal()
+{
+	PutEnv("cmd_count", "10");//需要插入的命令行数
+	
+	putEnv("cmd_str0","\t-\@echo Collecting condition variables......");
+	
+	putEnv("cmd_str1","\t-\@find ../../ -name *.cpp -exec grep -E '#endif|#ifdef|(\\s+|\\t+)defined|#elif' {} \\; > ../../tmp ;cat ../../tmp|sed -r '/\\//d'|sed -r 's/\\|\\||&&/\\n/g' >../../tmp_0");
+	putEnv("cmd_str2","\t-\@cat ../../tmp_0|sed -r 's/#endif|#elif|#ifdef|#if\\s|defined//g'|sed -r 's/\\\\|!|\\(|\\)//g'|sed -r '/\\/|=|>|<|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sort|uniq > ../../tmp0");
+	
+	putEnv("cmd_str3","\t-\@cat ../../tmp|grep -E -o '.*\\/\\/'|sed -r 's/\\/\\///g'|sed -r 's/\\|\\||&&/\\n/g'|sed -r 's/#endif|#elif|#ifdef|#if\\s|defined//g'|sed -r 's/!|\\(|\\)//g' >../../tmp_0");
+	putEnv("cmd_str4","\t-\@cat ../../tmp_0|sed -r '/\\/|=|>|<|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sort|uniq >> ../../tmp0;cat ../../tmp0|sed -r '/^\s*[0-9]*\s*$$$//d'|sed -r '/^\\s*[0-9]+\\s*$$$//d'|sort|uniq >../../defined.all");
+	
+	putEnv("cmd_str5","\t-\@echo $(CFLAGS)|grep -E -o '\\-D.*'|sed -r 's/(-D|-U)/\\n/g'|sed -r 's/\\s*=\\s*1//g'|sed -r 's/\\\"//g' >../../tmpp1;echo $(CFLAGS)|grep -E '\\-U[^ ]+' -o|sed -r 's/-U//g'>../../defined.undef;grep -v -f ../../defined.undef ../../tmpp1 >../../tmp1;");
+	putEnv("cmd_str6","\t-\@cat ../../tmp1|sed -r '/=|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sed -r 's/(.*)/^\\1$$$//'|sort|uniq >../../defined.noequal");
+	putEnv("cmd_str7","\t-\@cat ../../tmp1|sed -r '/^\\s*$$$//d'|grep -E '='|sed -r 's/\\s*|\\t*//g'|sort|uniq >../../defined.equal");
+	
+	putEnv("cmd_str8","\t-\@grep -v -f ../../defined.noequal  ../../defined.all|sed -r 's/(.*)/\\1=0/' > ../../define;cat ../../defined.noequal|sed -r 's/\\^//'|sed -r 's/\\$$$//=1/' >> ../../define;cat ../../defined.equal >> ../../define");
+	
+	putEnv("cmd_str9","\t-\@rm ../../tmp* ../../defined.*");
+	
+}
+
+//向文件的ln行写入命令,参数是已打开文件的句柄，返回插入命令的行数
+macro writeCommand(file, ln)
+{
+	cmdLnCnt = GetEnv("cmd_count");// 10;
+
+	if(0 == file && ln == 0)
+	{
+		return 
+	}
+	else if(0 == ifExist(file))
+	{
+		return cmdLnCnt;
+	}
+	else
+	{
+		hbuf = OpenBuf (file);
+
+		i = cmdLnCnt - 1;
+		while(i >= 0)
+		{
+			InsBufLine (hbuf, ln, GetEnv(cat("cmd_str",i)));
+			i = i - 1;
+		}
+		
+		SaveBuf (hbuf);	
+		CloseBuf (hbuf);
+
+		return cmdLnCnt;
+	}
+}
+
+//从文件中删除行,包括ln所在行以及之后的count行,返回删除掉的行数
+macro deleteCommand(file,ln,count)
+{
+	if(0 == ifExist(file) || ln == 0)
+	{
+		return 0;
+	}
+	else
+	{
+		hbuf = OpenBuf(file);
+		if(ln + count< GetBufLineCount(hbuf))
+		{
+			i = count - 1;
+			while(i >= 0)
+			{
+				DelBufLine (hbuf, ln + i);
+				i = i - 1;
+			}	
+			SaveBuf (hbuf);	
+		}
+		
+		CloseBuf(hbuf);
+		return count;
+	}
+}
+
+//向depend文件写入linux命令(用于提取宏以及处理),返回插入命令的行数
+macro writeDependFile(depend_file)
+{
+	str = GetEnv("cmd_str0");//标志内容
+	ln = lineOfFile(depend_file,str);
+
+	if(0 == ln)//文件中无命令
+	{	
+		str = "\t$(AR) crus $\@ $(OBJS)";//生成libapp.a的工程的标志行
+		ln_lib = lineOfFile(depend_file,str);
+		if(0 != ln_lib)//如果是生成libapp.a的工程
+		{
+			return writeCommand(depend_file,ln_lib + 1);
+		}
+		else
+		{
+			str = "\t\@echo $(CFLAGS)";//Challenge的工程的标志行
+			ln_ch = lineOfFile(depend_file,str);
+
+			return writeCommand(depend_file,ln_ch + 1);
+		}		
+	}
+	else
+	{	//当参数为0，0时，writeCommand不处理文件，仅返回插入命令的行数，
+		//这么做是为解耦，避免这里返回文件中已经插入的命令的行数，
+		//checkEnv依此来恢复depend文件
+		return 9;//writeCommand(0, 0);
+	}
+}
+
+//根据file的内容，向hProj添加环境变量
+macro addCondition(hProj, file)
+{	
+	if(0 == ifExist(file))
+	{
+		return 0;
+	}
+	else
+	{
+		hbuf = OpenBuf(file);
+		
+		ln_cnt = GetBufLineCount(hbuf);
+		ln = 0;
+		while(ln<ln_cnt)
+		{
+			str = GetBufLine(hbuf, ln);
+			
+			if(str != " ")	
+				AddConditionVariable(hProj ,nameOf(str), valueOf(str));
+				
+			ln = ln + 1;
+		}
+		
+		CloseBuf (hbuf);
+		return ln;
+	}
+}
+
+//清除工程内，file文件指定的环境变量,返回删除掉的变量数
+macro clearCondition(hProj,file)
+{
+	if(0 == ifExist(file))
+	{
+		return 0;
+	}
+	else
+	{
+		hbuf = OpenBuf(file);
+		ln_cnt = GetBufLineCount (hbuf);
+		ln = 0;
+		while(ln<ln_cnt)
+		{
+			str = GetBufLine(hbuf, ln);
+			DeleteConditionVariable(hProj ,nameOf(str));
+			ln = ln + 1;
+		}
+		
+		CloseBuf (hbuf);
+		return ln;
+	}
+}
+
+//避免自己输入代码路径
+macro searchDir()
+{
+	hbuf = GetCurrentBuf ();
+	dir_str = GetBufName (hbuf);
+	pos = strlen(dir_str) - 1;
+	while(pos > 0)
+	{
+		while(pos > 0)
+		{
+			if(strmid (dir_str, pos, pos + 1) == "\\")
+				break;
+			pos = pos - 1;
+		}
+		if(ifExist(cat(strmid(dir_str, 0, pos ),"\\Build\\depend")))
+			break;
+		pos = pos - 1;
+	}
+	if(pos > 0)
+		return strmid(dir_str, 0, pos );
+	else
+		return -1;
+}
+//避免make:nothing to been done for all;的情况
+macro modiFile()
+{
+	hbuf = GetCurrentBuf ();
+	ln_cnt = GetBufLineCount (hbuf);
+
+	if(GetBufLine (hbuf, ln_cnt - 1) == "  ")
+		DelBufLine (hbuf, ln_cnt - 1);
+	else
+		AppendBufLine (hbuf, "  ");
+
+	SaveBuf (hbuf);
 }
