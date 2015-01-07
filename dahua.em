@@ -1,5 +1,7 @@
 /*
-//大华Source Insight插件v0.1
+//大华Source Insight插件
+v0.9.0
+
 //此插件融合各方插件功能
 //修改使适用于大华，提高研发开发效率
 //
@@ -459,6 +461,16 @@ macro tabCompletion()
             SetWndSel(hwnd, sel)
             SetBufSelText(hbuf, "else if(  )")
             sel.ichFirst = sel.ichFirst + 7
+        }
+        else if( key == "for" )
+        {
+            SetBufSelText(hbuf, "()")
+			sel.ichFirst = sel.ichFirst - 1
+		}
+		else if( key == "for" )
+        {
+            SetBufSelText(hbuf, "()")
+            sel.ichFirst = sel.ichFirst - 1
         }
         else
         {
@@ -1133,7 +1145,37 @@ macro RunExe()
 {
 
 }
+macro JumpToFile(filename)
+{
+    ifile = 0
+    hproj = GetCurrentProj()
+    ifileMax = GetProjFileCount (hproj)
+    while (ifile < ifileMax )
+    {
+        file1 = GetProjFileName (hproj, ifile)
+        // Msg(file1)
 
+        len1 = strlen(file1)
+        len = strlen(filename)
+        
+        if( len1 < len )
+        {    
+            ifile = ifile + 1
+            continue
+        }
+        if( strmid(file1,len1-len,len1) == filename )
+        {
+            break
+        }
+        ifile = ifile + 1
+    }
+
+    if( ifile < ifileMax )
+    {
+        fbuf = OpenBuf(file1)
+        SetCurrentBuf(fbuf)
+    }
+}
 macro JumpCpp()
 {
     hwnd = GetCurrentWnd()
@@ -1151,39 +1193,14 @@ macro JumpCpp()
 
     if( filename[len-2] == "." && filename[len-1] == "h" )
     {
-        file = strmid(filename,0,len-1) # "cpp"
+        dstfile = strmid(filename,0,len-1) # "cpp"
     }
     else
     {
-        file = strmid(filename,0,len-3) # "h"
+        dstfile = strmid(filename,0,len-3) # "h"
     }
 
-    ifile = 0
-    hproj = GetCurrentProj()
-    ifileMax = GetProjFileCount (hproj)
-    while (ifile < ifileMax )
-    {
-        file1 = GetProjFileName (hproj, ifile)
-        len1 = strlen(file1)
-        len = strlen(file)
-        
-        if( len1 < len )
-        {    
-            ifile = ifile + 1
-            continue
-        }
-        if( strmid(file1,len1-len,len1) == file )
-        {
-            break
-        }
-        ifile = ifile + 1
-    }
-
-    if( ifile < ifileMax )
-    {
-        fbuf = OpenBuf(file1)
-        SetCurrentBuf(fbuf)
-    }
+    JumpToFile(dstfile)
 }
 
 ///\brief 添加函数Doxygen注释
@@ -1408,7 +1425,7 @@ macro JumpBlock()
     hbuf = GetCurrentBuf()
     ln = GetBufLnCur( hbuf )
     linebuf = GetBufLine(hbuf,ln)
-    len = strlen(lineBuf)
+    len = strlen(linebuf)
 
     // Msg(linebuf)
 
@@ -1467,11 +1484,43 @@ macro CopyPrevFilePath()
     SetBufSelText(hbuf,bufname)
 }
 
-
-macro CopyFileFullPath()
+//符号跳转：增加支持头文件跳转
+macro JumpToDefinitionEx()
 {
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetCurrentBuf()
+    linebuf = GetBufLine(hbuf,sel.lnFirst)
+    
+    //优先处理头文件跳转
+    key = "#include"
+    len = strlen(key)
+    linebuf = TrimLeft(linebuf) //左边空格去掉
 
+    if( len < strlen(linebuf) )
+    {
+        if( strmid(linebuf,0,len) == key )
+        {
+            pos1 = strstr(linebuf,"\"",1)
+            pos2 = strstr(linebuf,"\"",2)
+            if( pos1 != -1 && pos2 != -1 )
+            {
+                dstfile = strmid(linebuf,pos1, pos2-1)
+                dstfile = strreplace(dstfile,"/", "\\")
+                // Msg(dstfile)
+                JumpToFile(dstfile)
+            }
+            //在
+            return
+        }
+    }
+
+    //按默认方式处理符号跳转
+    Jump_To_Definition
 }
+
+//end dahua.em
+
 
 
 /****************************************************************************

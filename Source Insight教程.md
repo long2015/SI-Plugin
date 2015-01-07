@@ -15,6 +15,8 @@ Ctrl+,                  Go Back
 Ctrl+.                  Go Forword
 上下左右                移动光标
 Ctrl+上下左右           按单词移动
+Ctrl+=                  跳转符号实现或者跳转到文件
+Ctrl+-                  跳转到符号定义
 Ctrl+a Ctrl+e           行首 行尾  将光标放至选中单行内容末尾或多行内容每行行尾
 ctrl+m                  光标移动至括号内开始或结束的位置
 Alt+F3, Shift+F8        高亮，选择所有相同的词
