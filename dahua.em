@@ -400,6 +400,7 @@ macro tabCompletion()
     key = word.key
     lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
+
     //先跳出
     if ( jumpOut()==true )
     {
@@ -407,7 +408,49 @@ macro tabCompletion()
         // 跳到"/* code */"处
         return
     }
-    else if (key == "inc" )
+    else if( CompleteKeyword(key) == true )
+    {
+        return
+    }
+    else if( JumpNextArgs(key) == true )
+    {
+        return
+    }
+    else if( key == "{" )
+    {
+        InsBufLine(hbuf, ln+1, lnblanks # "    ");
+        InsBufLine(hbuf, ln + 2, lnblanks # "}");
+        sel.lnFirst = ln + 1
+        sel.lnLast = sel.lnFirst
+        sel.ichFirst = sel.ichFirst + 4
+        sel.ichLim = sel.ichFirst
+        SetWndSel(hwnd, sel)
+        return
+    }
+    // else if( CompleteWord() )
+    // {
+    //     return
+    // }
+    else
+    {
+        //
+        Tab
+        return
+    }
+}
+
+macro CompleteKeyword(key)
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    linebufLen = strlen(linebuf)
+    lnblanks = GetBeginBlank(linebuf)
+    ln = sel.lnFirst
+
+    if (key == "inc" )
     {
          sel.ichFirst = sel.ichFirst - 3
          SetWndSel(hwnd, sel)
@@ -415,7 +458,7 @@ macro tabCompletion()
          sel.ichFirst = sel.ichFirst + 10
          sel.ichLim = sel.ichFirst
          SetWndSel(hwnd, sel)
-         return
+         return true
     }
     else if (key == "tra" )
     {
@@ -425,7 +468,7 @@ macro tabCompletion()
          sel.ichFirst = sel.ichFirst + 7
          sel.ichLim = sel.ichFirst
          SetWndSel(hwnd, sel)
-         return
+         return true
     }
     else if( key == "pri" )
     {
@@ -433,7 +476,7 @@ macro tabCompletion()
         sel.ichFirst = sel.ichFirst + 5
         sel.ichLim = sel.ichFirst
         SetWndSel(hwnd, sel)
-        return
+        return true
     }
     else if( key == "main" )
     {
@@ -451,7 +494,7 @@ macro tabCompletion()
         sel.lnFirst = ln + 2
         sel.lnLast = sel.lnFirst
         SetWndSel(hwnd,sel)
-        return
+        return true
     }
     else if( key == "if" || key == "while" || key == "for" || key == "elif" )
     {
@@ -465,9 +508,9 @@ macro tabCompletion()
         else if( key == "for" )
         {
             SetBufSelText(hbuf, "()")
-			sel.ichFirst = sel.ichFirst - 1
-		}
-		else if( key == "for" )
+            sel.ichFirst = sel.ichFirst - 1
+        }
+        else if( key == "for" )
         {
             SetBufSelText(hbuf, "()")
             sel.ichFirst = sel.ichFirst - 1
@@ -485,7 +528,7 @@ macro tabCompletion()
         sel.ichLim = sel.ichFirst
         sel.lnLast = sel.lnFirst
         SetWndSel(hwnd, sel)
-        return
+        return true
     }
     else if( key == "else" || key == ")")
     {
@@ -519,30 +562,75 @@ macro tabCompletion()
         sel.lnFirst = ln + 2
         sel.lnLast = sel.lnFirst
         SetWndSel(hwnd, sel)
-        return
+        return true
     }
-    else if( key == "{" )
-    {
-        InsBufLine(hbuf, ln+1, lnblanks # "    ");
-        InsBufLine(hbuf, ln + 2, lnblanks # "}");
-        sel.lnFirst = ln + 1
-        sel.lnLast = sel.lnFirst
-        sel.ichFirst = sel.ichFirst + 4
-        sel.ichLim = sel.ichFirst
-        SetWndSel(hwnd, sel)
-        return
-    }
-    // else if( CompleteWord() )
-    // {
-    //     return
-    // }
-    else
-    {
-        //
-        Tab
-        return
-    }
+
+    return false
 }
+
+macro JumpNextArgs(key)
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    linebufLen = strlen(linebuf)
+
+    hnewbuf = GetOrCreateBuf("*Functions-Line*")
+    ClearBuf(hnewbuf)
+    AppendBufLine(hnewbuf, linebuf)
+
+    //盘点当前行是否是函数调用
+    isfunc = SearchInBuf(hnewbuf, "[a-zA-Z_0-9]+\\s+[a-zA-Z_0-9]+(.*)", 0, 0,0,1,0)
+    // Msg(isfunc)
+    if( isfunc != "" )
+    {
+        return false
+    }
+    // isfunc = SearchInBuf(hnewbuf, "[(\\.)|(->)]*[a-zA-Z_0-9]+([a-zA-Z_0-9\\s,\\*/=->\\.]*)", 0, 0,0,1,0)
+    isfunc = SearchInBuf(hnewbuf, "[a-zA-Z_0-9]+(.*)", 0, 0,0,1,0)
+    // Msg(isfunc)
+
+    //不是函数调用
+    if( isfunc == "" )
+        return false
+    if( linebuf[isfunc.ichFirst-1] == ":" )
+        return false
+
+
+    //找参数
+    // result = SearchInBuf(hnewbuf,"[a-zA-Z_0-9]+\\s+[\\*|&]*\\s*[a-zA-Z_0-9]+\\s*=*\\s*[a-zA-Z_0-9]*", 0, sel.ichFirst+1,0,1,0)
+    
+    result = SearchInBuf(hnewbuf,"(.*,", 0, sel.ichFirst,0,1,0)
+    if( result == "" )
+    {
+        result = SearchInBuf(hnewbuf,",.*,", 0, sel.ichFirst,0,1,0)
+    }
+    if( result == "" )
+    {
+        result = SearchInBuf(hnewbuf,",.*)", 0, sel.ichFirst,0,1,0)            
+    }
+    if( result == "" )
+    {
+        result = SearchInBuf(hnewbuf,"(.*)", 0, sel.ichFirst,0,1,0)            
+    }
+
+    // Msg(result)
+    if( result != "" )
+    {
+        //选中参数
+        result.ichFirst = result.ichFirst + 1
+        result.ichLim = result.ichLim - 1
+        result.lnFirst = sel.lnFirst
+        result.lnLast = sel.lnLast
+        SetWndSel(hWnd,result)
+        return true
+    }
+
+    return false
+}
+
 macro BackspaceEx()
 {
     hwnd = GetCurrentWnd()
@@ -1003,10 +1091,10 @@ macro MultiLineComment()
     line = lnFirst
     while( line <= lnLast )
     {
-        lineBuf = GetBufLine(hbuf,line)
-        lineLen = strlen(lineBuf)
+        linebuf = GetBufLine(hbuf,line)
+        lineLen = strlen(linebuf)
 
-        szRight = TrimLeft(lineBuf)
+        szRight = TrimLeft(linebuf)
         rightLen = strlen(szRight)
         if(  rightLen < 2 )
         {
@@ -1033,9 +1121,9 @@ macro MultiLineComment()
         lnFirstPos = 2 //第一行向左退2格
         while(line <= lnLast)
         {
-            lineBuf = GetBufLine(hbuf,line)
-            lineLen = strlen(lineBuf)
-            szRight = TrimLeft(lineBuf)
+            linebuf = GetBufLine(hbuf,line)
+            lineLen = strlen(linebuf)
+            szRight = TrimLeft(linebuf)
             rightLen = strlen(szRight)
 
             leftLen = lineLen - rightLen
@@ -1048,8 +1136,8 @@ macro MultiLineComment()
                     lnFirstPos = lnFirstPos + 1
             }
             if( leftLen > 0 )
-                newbuf = newbuf # strmid(lineBuf, 0,leftLen)
-            newbuf = newbuf # strmid(lineBuf, pos,lineLen)
+                newbuf = newbuf # strmid(linebuf, 0,leftLen)
+            newbuf = newbuf # strmid(linebuf, pos,lineLen)
             DelBufLine(hbuf,line)
             InsBufLine(hbuf,line,newbuf)
 
@@ -1068,9 +1156,9 @@ macro MultiLineComment()
         line = Lnfirst
         while( line <= lnLast )
         {
-            lineBuf = GetBufLine(hbuf,line)
-            lineLen = strlen(lineBuf)
-            szRight = TrimLeft(lineBuf)
+            linebuf = GetBufLine(hbuf,line)
+            lineLen = strlen(linebuf)
+            szRight = TrimLeft(linebuf)
             rightLen = strlen(szRight)
             if( rightLen == 0 )   //空行不处理
             {
@@ -1087,7 +1175,7 @@ macro MultiLineComment()
         line = lnFirst
         while( line <= lnLast )
         {
-            lineBuf = GetBufLine(hbuf,line)
+            linebuf = GetBufLine(hbuf,line)
 
             sel.ichFirst = minFirst
             sel.ichLim = minFirst
