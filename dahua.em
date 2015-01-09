@@ -398,6 +398,7 @@ macro tabCompletion()
     word = GetLeftWord(sel.ichFirst, linebuf)
 
     key = word.key
+
     lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
 
@@ -600,28 +601,14 @@ macro JumpNextArgs(key)
 
 
     //找参数
-    // result = SearchInBuf(hnewbuf,"[a-zA-Z_0-9]+\\s+[\\*|&]*\\s*[a-zA-Z_0-9]+\\s*=*\\s*[a-zA-Z_0-9]*", 0, sel.ichFirst+1,0,1,0)
-    
-    result = SearchInBuf(hnewbuf,"(.*,", 0, sel.ichFirst,0,1,0)
-    if( result == "" )
-    {
-        result = SearchInBuf(hnewbuf,",.*,", 0, sel.ichFirst,0,1,0)
-    }
-    if( result == "" )
-    {
-        result = SearchInBuf(hnewbuf,",.*)", 0, sel.ichFirst,0,1,0)            
-    }
-    if( result == "" )
-    {
-        result = SearchInBuf(hnewbuf,"(.*)", 0, sel.ichFirst,0,1,0)            
-    }
+    result = SearchInBuf(hnewbuf,"[a-zA-Z_0-9]+\\s+[\\*|&]*\\s*[a-zA-Z_0-9]+\\s*=*\\s*[a-zA-Z_0-9]*", 0, sel.ichFirst+1,0,1,0)
 
     // Msg(result)
     if( result != "" )
     {
         //选中参数
-        result.ichFirst = result.ichFirst + 1
-        result.ichLim = result.ichLim - 1
+        result.ichFirst = result.ichFirst
+        result.ichLim = result.ichLim
         result.lnFirst = sel.lnFirst
         result.lnLast = sel.lnLast
         SetWndSel(hWnd,result)
@@ -963,6 +950,47 @@ macro GoDown5()
 
 ////////////////////////////////////////////////////////
 //////////////////////// VimMode ///////////////////////
+macro VimMode()
+{
+    hbuf = GetCurrentBuf();
+    mode = "Cursor"
+
+    while(1)
+    {
+        // Wait for the next key press and return the key code.
+        key = GetKey()
+        
+        // Map the key code into a simple character.
+        //
+        // If you only need a simple character, you can 
+        // call GetChar() instead of GetKey + CharFromKey
+        ch = CharFromKey(key)
+        //光标移动
+        if( MoveCursor(ch, mode) == true )
+            continue
+        else if( ch == "v" )
+        {
+            if( mode == "Cursor" )
+                mode = "Select"
+            else
+                mode = "Cursor"
+        }
+        else if( ch == "-" )
+            Jump_To_Prototype
+        else if( ch == "=" )
+            JumpToDefinitionEx
+        else if( ch == "p" )
+            Page_Up
+        else if( ch == "n" )
+            Page_Down
+        else if( ch == "f" )
+            FindInLine
+        else if( ch == "c" )
+            show_at_center
+        else if( ch == "q" ) //q退出vim模式
+            stop
+    }
+}
 macro FindInLine()
 {
     hWnd = GetCurrentWnd()
@@ -976,7 +1004,7 @@ macro FindInLine()
     ch = CharFromKey(key)
     ch = toupper(ch)
 
-    index = sel.ichFirst
+    index = sel.ichFirst + 1
     len = strlen(linebuf)
     while( index < len )
     {
@@ -993,36 +1021,52 @@ macro FindInLine()
         SetWndSel(hWnd, sel)
     }
 }
-
-macro VimMode()
+macro show_at_center()
 {
-    hbuf = GetCurrentBuf();
-    while(1)
-    {
-        // Wait for the next key press and return the key code.
-        key = GetKey()
-        
-        // Map the key code into a simple character.
-        //
-        // If you only need a simple character, you can 
-        // call GetChar() instead of GetKey + CharFromKey
-        ch = CharFromKey(key)
-        
-        //光标移动
-        if( ch == "h" )
-            Cursor_Left
-        else if( ch == "j" )
-            Cursor_Down
-        else if( ch == "k" )
-            Cursor_Up
-        else if( ch == "l" )
-            Cursor_Right
-        else if( ch == "f" )
-            FindInLine
-        else
-            stop
-    }
+    hWnd = GetCurrentWnd()
+    sel = GetWndSel(hWnd)
+    hbuf = GetCurrentBuf()
+
+    topline = GetWndVertScroll(hwnd)
+    linecount = GetWndLineCount(hwnd)
+    buflinecount = GetBufLineCount(hBuf)
+
+    offset = linecount/2 - (sel.lnFirst - topline)
+    dstline = topline-offset
+
+    if( dstline > 0 && dstline < buflinecount - linecount + 1 )
+        ScrollWndToLine(hwnd,dstline)
 }
+macro MoveCursor(ch, mode)
+{
+    if( ch == "h" && mode == "Cursor" )
+        Cursor_Left
+    else if( ch == "h" && mode == "Select" )
+        Select_Char_Left
+    else if( ch == "j" && mode == "Cursor" )
+        Cursor_Down
+    else if( ch == "j" && mode == "Select" )
+        Select_Line_Down
+    else if( ch == "k" && mode == "Cursor" )
+        Cursor_Up
+    else if( ch == "k" && mode == "Select" )
+        Select_Line_Up
+    else if( ch == "l" && mode == "Cursor" )
+        Cursor_Right
+    else if( ch == "l" && mode == "Select" )
+        Select_Char_Right
+    else if( ch == "a" )
+        jumpLineStart
+    else if( ch == "e" )
+        jumpLineEnd
+    else
+        return false
+
+    return true
+}
+//////////////////////// VimMode End///////////////////////
+////////////////////////////////////////////////////////
+
 
 macro InsertPoint()
 {

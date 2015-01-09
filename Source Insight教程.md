@@ -14,6 +14,7 @@ F4                      搜索后一个
 Ctrl+,                  Go Back
 Ctrl+.                  Go Forword
 上下左右                移动光标
+Alt+ikjl                移动光标
 Ctrl+上下左右           按单词移动
 Ctrl+=                  跳转符号/函数实现或者跳转到文件
 Ctrl+-                  跳转到符号/函数定义
@@ -32,7 +33,9 @@ Ctrl+c v                复制粘贴
 Ctrl+x                  选定内容状态下为剪切内容，未选中为剪切光标当前所在行
 Ctrl+y z                撤销/恢复撤销
 
-Shift+左右          字符选中
+Shift+左右              字符选中
+Shift+Alt+jl
+
 Ctrl+Shift+左右         词选中
 ctrl+d                  选中单词 （继续按键则选择下个相同的字符串）
 Ctrl+Shift+d            选择词并替换为复制内容
@@ -55,6 +58,10 @@ Ctrl+Shift+Delete       删除到行尾
 Ctrl+n                  新建文件
 Ctrl+o                  打开文件
 Ctrl+w                  关闭窗口
+Alt+d                   svn diff
+Alt+b                   svn blame
+Alt+n                   svn log
+Alt+e                   打开explorer                   
 >>> Ctrl+Shift+[            折叠打开
 >>> Ctrl+Shift+]            代码折叠
 >>> F9                      行排序
