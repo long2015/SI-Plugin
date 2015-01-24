@@ -1,6 +1,6 @@
 /*
 //大华Source Insight插件
-v0.10.0
+v0.11.0
 
 //此插件融合各方插件功能
 //修改使适用于大华，提高研发开发效率
@@ -377,7 +377,32 @@ macro OpenorNewBuf(szfile)
     }
     return hout
 }
+macro ReloadSnippets()
+{
+    snipfile = LoadSnippets("DahuaAPP.Snippets")
+    CloseBuf(snipfile.hbuf)
 
+    // Msg(snipfile)
+    LoadSnippets("DahuaAPP.Snippets")
+
+}
+
+macro LoadSnippets(filename)
+{
+    info = GetProgramEnvironmentInfo()
+    dir = info.BackupDir
+    dir = strmid(dir,0,strlen(dir)-6)
+    dir = cat(dir,"Projects\\Base\\")
+    filename = cat(dir,filename)
+
+    hbuf = OpenorNewBuf(filename)
+    var snipfile
+    snipfile.hbuf = hbuf
+    snipfile.linecnt = GetBufLineCount(hbuf)
+
+
+    return snipfile
+}
 
 /*********************End Base Functions*********************/
 
@@ -419,15 +444,15 @@ macro tabCompletion()
     }
 
     //补全模式
-    word = GetLeftWord(sel.ichFirst, linebuf)
-
-    key = word.key
+    keyinfo = GetLeftWord(sel.ichFirst, linebuf)
+    // Msg(keyinfo)
+    key = keyinfo.key
 
     lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
 
     //先跳出
-    if ( jumpOut()==true )
+    if ( jumpOut(key)==true )
     {
         //跳出函数，后括号等
         // 跳到"/* code */"处
@@ -439,17 +464,6 @@ macro tabCompletion()
     }
     else if( JumpNextArgs(key) == true )
     {
-        return
-    }
-    else if( key == "{" )
-    {
-        InsBufLine(hbuf, ln+1, lnblanks # "    ");
-        InsBufLine(hbuf, ln + 2, lnblanks # "}");
-        sel.lnFirst = ln + 1
-        sel.lnLast = sel.lnFirst
-        sel.ichFirst = sel.ichFirst + 4
-        sel.ichLim = sel.ichFirst
-        SetWndSel(hwnd, sel)
         return
     }
     // else if( CompleteWord() )
@@ -464,6 +478,61 @@ macro tabCompletion()
     }
 }
 
+macro GetSnippet(keyword)
+{
+    hwnd = GetCurrentWnd()
+    oldsel = GetWndSel(hwnd)
+
+    var snippet;
+    snippet.ret = true
+    snippet.key = keyword
+    snippet.len = strlen(keyword)
+    var sel
+
+    snipfile = LoadSnippets("DahuaAPP.Snippets")
+    hbuf = snipfile.hbuf
+    linecnt = snipfile.linecnt
+
+    index = 1
+    while( index < linecnt - 1 )
+    {
+        linebuf = GetBufLine(hBuf,index)
+        offset = GetBufLine(hBuf,index+1)
+        if( linebuf != keyword )
+        {
+            index = index + 4 + offset
+            continue
+        }
+        else
+        {
+            linebuf = GetBufLine(hBuf,index+2)
+            snippet.lnFirst = index + 3
+            snippet.lnLast = index + 2 + offset
+            //获取sel
+            oldsel.ichFirst = oldsel.ichFirst - snippet.len
+
+            sel.lnFirst = oldsel.lnFirst + linebuf[0]
+            sel.ichFirst = oldsel.ichFirst + linebuf[2]
+            sel.lnLast = oldsel.lnFirst + linebuf[4]
+            sel.ichLim = oldsel.ichFirst + linebuf[6]
+
+            sel.fExtended=0
+            sel.fRect=0
+            break
+        }
+    }
+    if( index >= linecnt - 1 )
+    {
+        //没有匹配
+        snippet.ret = false
+    }
+    
+    snippet.sel = sel
+    snippet.hbuf = snipfile.hbuf
+
+    return snippet
+}
+
 macro CompleteKeyword(key)
 {
     hwnd = GetCurrentWnd()
@@ -471,122 +540,33 @@ macro CompleteKeyword(key)
     hbuf = GetWndBuf(hwnd)
 
     linebuf = GetBufLine(hbuf, sel.lnFirst);
-    linebufLen = strlen(linebuf)
     lnblanks = GetBeginBlank(linebuf)
+    linebufLen = strlen(linebuf)
     ln = sel.lnFirst
 
-    if (key == "inc" )
+    snippet = GetSnippet(key)
+    if( snippet.ret == true )
     {
-         sel.ichFirst = sel.ichFirst - 3
-         SetWndSel(hwnd, sel)
-         SetBufSelText(hbuf, "#include \"\"")
-         sel.ichFirst = sel.ichFirst + 10
-         sel.ichLim = sel.ichFirst
-         SetWndSel(hwnd, sel)
-         return true
-    }
-    else if (key == "tra" )
-    {
-         sel.ichFirst = sel.ichFirst - 3
-         SetWndSel(hwnd, sel)
-         SetBufSelText(hbuf, "trace(\"\");")
-         sel.ichFirst = sel.ichFirst + 7
-         sel.ichLim = sel.ichFirst
-         SetWndSel(hwnd, sel)
-         return true
-    }
-    else if( key == "pri" )
-    {
-        SetBufSelText(hbuf, "ntf(\"\");")
-        sel.ichFirst = sel.ichFirst + 5
-        sel.ichLim = sel.ichFirst
+        // Msg(snippet)
+        //处理第一行
+        sel.ichFirst = sel.ichFirst - snippet.len
         SetWndSel(hwnd, sel)
-        return true
-    }
-    else if( key == "main" )
-    {
-        sel.ichFirst = sel.ichFirst - 4
-        ln = sel.lnFirst
-        SetWndSel(hwnd, sel)
-        SetBufSelText(hbuf,"int main(int argc, char* argv[])")
-        InsBufLine(hbuf, ln + 1, "{")
-        InsBufLine(hbuf, ln + 2, "    ")
-        InsBufLine(hbuf, ln + 3, "    ")
-        InsBufLine(hbuf, ln + 4, "    return 0;")
-        InsBufLine(hbuf, ln + 5, "}")
-        sel.ichFirst = sel.ichFirst + 4
-        sel.ichLim = sel.ichLim
-        sel.lnFirst = ln + 2
-        sel.lnLast = sel.lnFirst
-        SetWndSel(hwnd,sel)
-        return true
-    }
-    else if( key == "if" || key == "while" || key == "for" || key == "elif" )
-    {
-        if( key == "elif" )
-        {
-            sel.ichFirst = sel.ichFirst - 4
-            SetWndSel(hwnd, sel)
-            SetBufSelText(hbuf, "else if(  )")
-            sel.ichFirst = sel.ichFirst + 7
-        }
-        else if( key == "for" )
-        {
-            SetBufSelText(hbuf, "()")
-            sel.ichFirst = sel.ichFirst - 1
-        }
-        else if( key == "for" )
-        {
-            SetBufSelText(hbuf, "()")
-            sel.ichFirst = sel.ichFirst - 1
-        }
-        else
-        {
-            SetBufSelText(hbuf, "(  )")
-        }
+        index = snippet.lnFirst
+        linebuf = GetBufline(snippet.hbuf,index)
+        SetBufSelText(hbuf, linebuf)
+        
 
-        InsBufLine(hbuf, ln + 1, lnblanks # "{");
-        InsBufLine(hbuf, ln + 2, lnblanks # "    /* code */");
-        InsBufLine(hbuf, ln + 3, lnblanks # "}");
-
-        sel.ichFirst = sel.ichFirst + 2
-        sel.ichLim = sel.ichFirst
-        sel.lnLast = sel.lnFirst
-        SetWndSel(hwnd, sel)
-        return true
-    }
-    else if( key == "else" || key == ")")
-    {
-        linecur = GetBufLine(hbuf, ln);
-        line1 = GetBufLine(hbuf, ln+1);
-        line2 = GetBufLine(hbuf, ln+2);
-        line3 = GetBufLine(hbuf, ln+3);
-
-        szLine1 = lnblanks # "{"
-        szLine2 = lnblanks # "    /* code */"
-        szLine3 = lnblanks # "}"
-
-        sel.ichFirst = strlen(lnblanks) + 4
-        if( line1 == szLine1 && line2 == szLine2 && line3 == szLine3 )
+        index = index + 1
+        while(index <= snippet.lnLast )
         {
-            sel.ichLim = sel.ichFirst + 10
+            linebuf = GetBufline(snippet.hbuf,index)
+            linebuf = lnblanks # linebuf
+            InsBufLine(hbuf, sel.lnFirst + index - snippet.lnFirst, linebuf)
+            index = index + 1
         }
-        else if( line1 == szLine1 )
-        {
-            sel.ichLim = sel.ichFirst
-        }
-        else if( cmd == "else" )
-        {
-            InsBufLine(hbuf, ln + 1, szLine1);
-            InsBufLine(hbuf, ln + 2, szLine2);
-            InsBufLine(hbuf, ln + 3, szLine3);
-            sel.ichLim = sel.ichFirst + 10
-        }
+        //光标选中
+        SetWndSel(hwnd, snippet.sel)
 
-
-        sel.lnFirst = ln + 2
-        sel.lnLast = sel.lnFirst
-        SetWndSel(hwnd, sel)
         return true
     }
 
@@ -606,7 +586,7 @@ macro JumpNextArgs(key)
     ClearBuf(hnewbuf)
     AppendBufLine(hnewbuf, linebuf)
 
-    //盘点当前行是否是函数调用
+    //判断当前行是否是函数调用
     isfunc = SearchInBuf(hnewbuf, "[a-zA-Z_0-9]+\\s+[a-zA-Z_0-9]+(.*)", 0, 0,0,1,0)
     // Msg(isfunc)
     if( isfunc != "" )
@@ -686,7 +666,7 @@ macro BackspaceEx()
     //删除一个字符
     Backspace
 }
-macro jumpOut()
+macro jumpOut(key)
 {
     hwnd = GetCurrentWnd()
     hbuf = GetWndBuf(hwnd)
@@ -696,7 +676,38 @@ macro jumpOut()
     linebufLen = strlen(linebuf)
     ichFirst = sel.ichFirst;
 
+    //先处理跳转
+    if( linebufLen > 0 && linebuf[ichFirst-1] == ")")
+    {
+        ln = sel.lnFirst
+        lnblanks = GetBeginBlank(linebuf)
 
+        linecur = GetBufLine(hbuf, ln);
+        line1 = GetBufLine(hbuf, ln+1);
+        line2 = GetBufLine(hbuf, ln+2);
+        line3 = GetBufLine(hbuf, ln+3);
+
+        szLine1 = lnblanks # "{"
+        szLine2 = lnblanks # "    /* code */"
+        szLine3 = lnblanks # "}"
+
+        sel.ichFirst = strlen(lnblanks) + 4
+        if( line1 == szLine1 && line2 == szLine2 && line3 == szLine3 )
+        {
+            sel.ichLim = sel.ichFirst + 10
+        }
+        else if( line1 == szLine1 )
+        {
+            sel.ichLim = sel.ichFirst
+        }
+
+        sel.lnFirst = ln + 2
+        sel.lnLast = sel.lnFirst
+        SetWndSel(hwnd, sel)
+        return true
+    }
+
+    //jumpOut其他符号
     if( sel.ichFirst == linebufLen )
     {
         //在行尾，跳转到code行
@@ -2308,7 +2319,7 @@ to search other windows' buffers.
 
 Notes:
 
-+ This has nothing to do with Source Insight's notion of "symbols".
+ This has nothing to do with Source Insight's notion of "symbols".
   To the contrary, the long hairy words I need to type most often
   over & over are local words that SI's Complete_Symbol doesn't
   know about.  It's also the case that the word you most often
@@ -2317,10 +2328,10 @@ Notes:
   This flavor of completion also works fine in file types SI knows
   nothing about.
 
-+ The list isn't actually built up at once -- as far as possible,
+ The list isn't actually built up at once -- as far as possible,
   it's built incrementally as you continue to invoke CompleteWord.
 
-+ It would help if SI's SearchInBuf could search backwards.  As
+ It would help if SI's SearchInBuf could search backwards.  As
   is, finding the first suggestion is done by searching the entire
   buffer forward up until the stem location, and fiddling the
   results to act "as if" things were found in the other order.
@@ -2328,7 +2339,7 @@ Notes:
   with many stem matches it can take appreciable time to find the
   "first" match (since it's actually found last ...)..
 
-+ Would be nice to be able to display msgs on the status line;
+ Would be nice to be able to display msgs on the status line;
   e.g., the macros keep track of the file names and line numbers
   at which completions were found, and that's sometimes useful
   info to know (the completion process sometimes turns up
