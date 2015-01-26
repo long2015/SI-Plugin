@@ -1,6 +1,6 @@
 /*
 //大华Source Insight插件
-v0.11.0
+v0.11.1
 
 //此插件融合各方插件功能
 //修改使适用于大华，提高研发开发效率
@@ -477,6 +477,26 @@ macro tabCompletion()
         return
     }
 }
+macro GetSel(linebuf)
+{
+    var offset 
+
+    pos = strstr(linebuf,",",1)
+    offset.lnFirst = strmid(linebuf,0,pos-1)
+
+    linebuf = strmid(linebuf,pos,strlen(linebuf))
+    pos = strstr(linebuf,",",1)
+    offset.ichFirst = strmid(linebuf,0,pos-1)
+
+    linebuf = strmid(linebuf,pos,strlen(linebuf))
+    pos = strstr(linebuf,",",1)
+    offset.lnLast = strmid(linebuf,0,pos-1)
+
+    linebuf = strmid(linebuf,pos,strlen(linebuf))
+    offset.ichLim = linebuf
+
+    return offset
+}
 
 macro GetSnippet(keyword)
 {
@@ -511,10 +531,14 @@ macro GetSnippet(keyword)
             //获取sel
             oldsel.ichFirst = oldsel.ichFirst - snippet.len
 
-            sel.lnFirst = oldsel.lnFirst + linebuf[0]
-            sel.ichFirst = oldsel.ichFirst + linebuf[2]
-            sel.lnLast = oldsel.lnFirst + linebuf[4]
-            sel.ichLim = oldsel.ichFirst + linebuf[6]
+            var offset
+            offset = GetSel(linebuf)
+            // Msg(offset)
+
+            sel.lnFirst = oldsel.lnFirst + offset.lnFirst
+            sel.ichFirst = oldsel.ichFirst + offset.ichFirst
+            sel.lnLast = oldsel.lnFirst + offset.lnLast
+            sel.ichLim = oldsel.ichFirst + offset.ichLim
 
             sel.fExtended=0
             sel.fRect=0
@@ -575,6 +599,11 @@ macro CompleteKeyword(key)
 
 macro JumpNextArgs(key)
 {
+    if( key == "" )
+    {
+        return false
+    }
+
     hwnd = GetCurrentWnd()
     sel = GetWndSel(hwnd)
     hbuf = GetWndBuf(hwnd)
@@ -676,8 +705,13 @@ macro jumpOut(key)
     linebufLen = strlen(linebuf)
     ichFirst = sel.ichFirst;
 
+    if( ichFirst <= 0 )
+    {
+        return false
+    }
+
     //先处理跳转
-    if( linebufLen > 0 && linebuf[ichFirst-1] == ")")
+    if( linebuf[ichFirst-1] == ")" && sel.lnFirst + 3 < GetBufLineCount(hbuf) )
     {
         ln = sel.lnFirst
         lnblanks = GetBeginBlank(linebuf)
@@ -708,7 +742,7 @@ macro jumpOut(key)
     }
 
     //jumpOut其他符号
-    if( sel.ichFirst == linebufLen )
+    if( sel.ichFirst == linebufLen && sel.lnFirst + 4 < GetBufLineCount(hbuf) )
     {
         //在行尾，跳转到code行
         line = sel.lnFirst + 1
