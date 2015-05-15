@@ -1,3 +1,8 @@
+v0.11.0 (05/15/2015)
+
+* Add Sublime Keymap
+* Add Pycharm Setting file
+
 v0.10.0 (01/12/2015)
 
 * Add Vim模式：Ctrl+k 支持ikjl以及f查找 np上下翻页 c行居中

@@ -1,0 +1,21 @@
+[
+	{ "keys": ["alt+enter"], "command": "select_highlighted_words", "context":
+		[	{ "key": "selection_empty", "operator": "equal", "operand": false },
+			{ "key": "setting.is_widget", "operator": "equal", "operand": false }
+		]
+	},
+	{ "keys": ["alt+f1"], "command": "toggle_side_bar" },
+
+	{ "keys": ["f4"], "command": "find_next" },
+	{ "keys": ["f3"], "command": "find_prev" },
+	{ "keys": ["ctrl+,"], "command": "jump_back" },
+	{ "keys": ["ctrl+."], "command": "jump_forward" },
+	{ "keys": ["ctrl+a"], "command": "move_to", "args": {"to": "bol", "extend": false} },
+	{ "keys": ["ctrl+e"], "command": "move_to", "args": {"to": "eol", "extend": false} },
+	{ "keys": ["shift+f8"], "command": "find_all_under" },
+	{ "keys": ["ctrl+shift+l"], "command": "duplicate_line" },
+	{ "keys": ["ctrl+i"], "command": "run_macro_file", "args": {"file": "res://Packages/Default/Add Line Before.sublime-macro"} },
+
+	{ "keys": ["shift+f4"], "command": "next_result" },
+	{ "keys": ["shift+f3"], "command": "prev_result" },
+]
