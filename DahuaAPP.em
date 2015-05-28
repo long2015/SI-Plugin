@@ -1,6 +1,6 @@
 /*
 //大华Source Insight插件
-v0.11.1
+v0.12.0
 
 //此插件融合各方插件功能
 //修改使适用于大华，提高研发开发效率
@@ -84,6 +84,17 @@ macro strrstr(str,str1,n)
     }
 
     return -1;
+}
+macro Space(n)
+{
+    str = ""
+    index = 0
+    while( index < n )
+    {
+        str = str # " "
+        index = index + 1
+    }
+    return str
 }
 macro strreplace(str, old,new)
 {
@@ -447,6 +458,7 @@ macro tabCompletion()
     keyinfo = GetLeftWord(sel.ichFirst, linebuf)
     // Msg(keyinfo)
     key = keyinfo.key
+    // Msg(key)
 
     lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
@@ -459,6 +471,10 @@ macro tabCompletion()
         return
     }
     else if( CompleteKeyword(key) == true )
+    {
+        return
+    }
+    else if( CompleteJson(keyinfo) == true )
     {
         return
     }
@@ -596,7 +612,170 @@ macro CompleteKeyword(key)
 
     return false
 }
+macro ShowCompleteWord(key)
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    ln = GetBufLnCur( hbuf )
+    linebuf = GetBufLine(hbuf, ln+1)
 
+    hwordbuf = GetOrCreateBuf("*FindAllWord*")
+    maxCount = GetBufLineCount(hwordbuf)
+    // Msg(maxCount)
+
+    if( maxCount == 0 )
+    {
+        return false
+    }
+    else if( maxCount > 10 )
+    {
+        //最大显示10行结果
+        maxCount = 10
+    }
+
+    //检测是否有 ">>>word"
+    //找提示行
+    startLine = 0
+    endLine = 0
+    newsel = sel
+    if( linebuf == ">>>word" )
+    {
+        startLine = 1
+        index = 1
+
+        while( index < GetBufLineCount(hbuf) )
+        {
+            linebuf = GetBufLine(hbuf, ln+index)
+            // Msg(linebuf)
+            if( linebuf == "<<<word" )
+            {
+                endLine = index
+                newsel.lnFirst = ln+startLine
+                newsel.lnLast = ln+endLine
+                newsel.ichFirst = 0
+                newsel.ichLim = 7
+                break
+            }
+
+            index = index + 1
+        }
+    }
+
+    //只有一行结果，直接补全
+    if( maxCount == 1 )
+    {
+        linebuf = GetBufLine(hwordbuf, 0)
+        linebuf = TrimLeft(linebuf)
+        if( linebuf == key )
+        {
+            //直接退出
+            return false
+        }
+
+        linebuf = strmid(linebuf, strlen(key), strlen(linebuf))
+        newsel.lnFirst = sel.lnFirst
+        newsel.ichFirst = sel.ichFirst
+        SetWndSel(hwnd,newsel)
+        SetBufSelText(hbuf,linebuf # "\"]")
+
+        return true
+    }
+    
+
+    if( startLine != 0 && endLine != 0 )
+    {
+        SetWndSel(hwnd,newsel)
+        SetBufSelText(hbuf,">>>word")
+    }
+    else
+    {
+        InsBufLine(hBuf, ln+1,">>>word")
+    }
+
+    // Msg(maxCount)
+    index = 0
+    while( index < maxCount )
+    {
+        linebuf = GetBufLine(hwordbuf, index)
+        InsBufLine(hBuf, ln+2+index,linebuf)
+
+        index = index + 1
+    }
+
+    InsBufLine(hbuf, ln+2+index, "<<<word")
+    SetWndSel(hwnd, sel)
+
+    return true
+}
+
+macro FindAll(key)
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hWnd)
+
+    hnewbuf = GetOrCreateBuf("*FindAllWord*")
+    ClearBuf(hnewbuf)
+
+    findFlag = false
+    searchLine = 1
+    blanks = Space(sel.ichFirst - strlen(key))
+    while(1)
+    {
+        search = SearchInBuf(hbuf, key # "[a-zA-Z0-9_]*", searchLine,0,1,1,0)
+        // Msg(search)
+        if( search == "" )
+        {
+            break
+        }
+        if( search.lnFirst != sel.lnFirst )
+        {
+            linebuf = GetBufline(hbuf, search.lnFirst)
+            word = strmid(linebuf, search.ichFirst, search.ichLim)
+            // Msg(word)
+
+            //去重append
+            if( SearchInBuf(hnewbuf, word, 0,0,1,0,1) == "" )
+            {
+                // Msg(word)
+                AppendBufLine(hnewbuf, blanks # word)
+            }
+
+            findFlag = true
+        }
+        searchLine = search.lnFirst + 1
+    }
+    // Msg("finish")
+    return findFlag
+}
+
+macro CompleteJson(keyinfo)
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    ln = GetBufLnCur( hbuf )
+    linebuf = GetBufLine(hbuf,ln)
+
+    // Msg(keyinfo)
+    if( keyinfo.ich <= 2 || keyinfo.key == "" )
+    {
+        return false
+    }
+    // 不处理非json字段
+    if( linebuf[keyinfo.ich-1] != "\"" || linebuf[keyinfo.ich-2] != "[" )
+    {
+        return false
+    }
+
+    if( FindAll(keyinfo.key) == true )
+    {
+        return ShowCompleteWord(keyinfo.key)
+    }
+
+    return false
+}
 macro JumpNextArgs(key)
 {
     if( key == "" )
@@ -1723,6 +1902,410 @@ macro JumpToDefinitionEx()
 /*********************End Main Functions*********************/
 
 
+/*********************Start Set Macro Functions*********************/
+macro setEnvironment()
+{
+        //版本判断,3.5065以下程序不支持
+        ProVer = GetProgramInfo ();
+        if(ProVer.versionMinor < 50 || ProVer.versionBuild < 60)
+        {
+            // Msg("您的Source Insight版本太低，如需使用此工具，请安装3.50.0060及以上版。");
+            // stop
+        }
+        
+        initGlobal();//初始化全局变量
+        
+        hProj = GetCurrentProj ();
+        dir_proj = GetProjDir (hProj);
+        //寻找代码目录
+        depend_file = cat(dir_proj, "\\Build\\depend");
+        
+        //depend文件不存在,说明代码和source insight工程不在一个文件夹，则询问
+        if(0 == ifExist(depend_file) )
+        {   
+            dir_proj = searchDir();
+        }
+        
+        if(-1 == dir_proj )
+        {
+            dir_proj = Ask("请输入当前工程的代码目录，如'D:\\Code\\P_2011.05.04_XQ_2.608'");
+        }
+
+        if(strmid(dir_proj, strlen(dir_proj) - 1, strlen(dir_proj)) == "\\")
+        {
+            dir_proj = strmid(dir_proj, 0, strlen(dir_proj) - 1);
+        }
+                
+        //向depend文件写入命令     
+        depend_file = cat(dir_proj, "\\Build\\depend");
+        cmd_count = writeMakeFile(depend_file)
+        
+        //向depend_ti文件写入命令
+        depend_file = cat(dir_proj, "\\Build\\depend_ti");
+        writeMakeFile(depend_file)
+
+        //modiFile();
+        
+        Msg("请在您的编译路径里键入编译命令，并加上check参数。如:make OEM_VENDOR=HoneyWell check");
+
+        //向工程添加环境变量
+
+        con_file = cat(dir_proj, "\\defined.all");
+        setCondition(hProj, con_file);
+                
+        con_file = cat(dir_proj, "\\defined");
+        setCondition(hProj, con_file);
+        
+        //从depend文件中清除linux命令
+        depend_file = cat(dir_proj, "\\Build\\depend");
+        restoreMakeFile(depend_file);
+
+        depend_file = cat(dir_proj, "\\Build\\depend_ti");
+        restoreMakeFile(depend_file);
+
+        con_file = cat(dir_proj, "\\defined");
+        if(0 != ifExist(con_file))
+        {
+            SyncProjEx (hProj, 0, 1, 0);
+                        
+            Msg("环境变量已经设定。");           
+        }
+        else
+        {
+            Msg("未检测到临时文件defined和defined.all是否编译路径有误?");
+        }   
+}
+
+macro clearEnvironment()
+{
+    //版本判断,3.5065以下程序不支持
+    ProVer = GetProgramInfo ();
+    if(ProVer.versionMinor < 50 || ProVer.versionBuild < 60)
+    {
+        // Msg("您的Source Insight版本太低，如需使用此工具，请安装3.50.0060及以上版。");
+        // stop
+    }
+
+    hProj = GetCurrentProj ();
+    dir_proj = GetProjDir (hProj);
+
+        //寻找代码目录
+    depend_file = cat(dir_proj, "\\Build\\depend");
+    
+    //depend文件不存在,说明代码和source insight工程不在一个文件夹，则询问
+    if(0 == ifExist(depend_file) )
+    {   
+        dir_proj = searchDir();
+    }
+    
+    if(-1 == dir_proj )
+    {
+        dir_proj = Ask("请输入当前工程的代码目录，如'D:\\Code\\P_2011.05.04_XQ_2.608'");
+    }
+
+    if(strmid(dir_proj, strlen(dir_proj) - 1, strlen(dir_proj)) == "\\")
+    {
+        dir_proj = strmid(dir_proj, 0, strlen(dir_proj) - 1);
+    }
+    
+    //根据宏名列表文件,清除已经存在的环境变量
+    con_file = cat(dir_proj, "\\defined.all");
+    clearCondition(hProj,con_file);
+
+    con_file = cat(dir_proj, "\\defined");
+    clearCondition(hProj,con_file);
+
+    SyncProjEx (hProj, 0, 1, 0);
+    
+    //清理中间文件,避免对下次产生干扰,但保留clsList，用于清理环境变量          
+    com_str = cat("cmd /C \"del ",cat(dir_proj, "\\defined.all\""));
+    RunCmdLine (com_str, dir_proj, 1);      
+    
+    com_str = cat("cmd /C \"del ",cat(dir_proj, "\\defined\""));
+    RunCmdLine (com_str, dir_proj, 1);
+
+    Msg("已完成清理已有的宏!");  
+}
+
+//取行的名称,例如取"-Dversion=2.6"中的"version"
+macro nameOf(str)
+{
+    pos=0;
+    while(pos<strlen (str))
+    {
+        if(strmid (str,pos, pos+1) == "=")
+            break;
+        pos = pos + 1;
+    }
+    if(strlen(str) <= 2)
+    {
+        return strmid (str,0,pos);
+    }
+    else if(strmid (str,0,2) == "-D" || strmid (str,0,2) == "-U" )
+    {
+        return strmid (str,2,pos);
+    }
+    else
+    {
+        return strmid (str,0,pos);
+    }
+}
+
+//取等式的值,例如取"-Dversion=2.6"中的"2.6"
+macro valueOf(str)
+{
+    pos=0;
+    while(pos<strlen (str))
+    {
+        if(strmid (str,pos, pos+1) == "=")
+            break;
+        pos = pos + 1;
+    }
+
+    if(strlen(str) <= 2)
+    {
+        return 0;
+    }
+    else if(strmid (str,0,2) == "-D" && strlen(str) == pos)
+    {
+        return 1;
+    }
+    else if(strmid (str,0,2) == "-D" && strlen(str) != pos)
+    {
+        return strmid (str,pos+1,strlen (str));
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+//判断文件是否存在,0代表不存在,1代表存在
+macro ifExist(file)
+{
+    hbuf = OpenBuf(file);
+    if(0 == hbuf )
+    {
+        return 0;
+    }
+    else
+    {
+        CloseBuf(hbuf);
+        return 1;
+    }
+}
+
+//返回特定内容在文件中的行序号
+macro lineOfFile(file, str)
+{
+    if(0 == ifExist(file))
+    {
+        return 0;
+    }
+    else
+    {
+        hbuf = OpenBuf (file);
+        ln_cnt = GetBufLineCount(hbuf);
+        ln = 0; 
+        while(ln<ln_cnt)
+        {
+            if(str == GetBufLine (hbuf, ln))
+                return ln;
+                
+            ln = ln + 1;
+        }
+        CloseBuf (hbuf);        
+        return 0;
+
+    }
+}
+
+//把要写进depend文件的命令写入系统的环境变量里，
+//当做全局变量使用,便于以后更改程序
+macro initGlobal()
+{
+    PutEnv("cmd_count", "5");//需要插入的命令行数
+
+    putEnv("cmd_str0","check:");    
+    putEnv("cmd_str1","\t-\@echo 'Collecting condition variables......';find ../../ -name *.cpp -exec grep -E '^\\s*#if|^\\s*#elif' {} \\; > ../../tmp ;"); 
+    putEnv("cmd_str2","\t-\@cat ../../tmp| grep -E '^\\s*#[^\\/]+' -o | sed -r 's/\\|\\||&&/\\n/g' | sed -r 's/#[a-z]+|defined|\\(|\\)|\s+|!|[0-9]*\\s*(>|<|=|<=|>=|==)\\s*[0-9]*|\\s*|\"//g' > ../../tmp1;");
+    putEnv("cmd_str3","\t-\@cat ../../tmp1| sed -r '/^(0|1)?$$/d' | sort -u | sed -r 's/(.*)/-U\\1/g' > ../../defined.all");    
+    putEnv("cmd_str4","\t-\@echo $(CFLAGS)|sed -r 's/(-[a-zA-Z])/\\n\\1/g' | grep -E '(-D|-U).*' -o | sed -r 's/=.*|\\s+//g' > ../../defined;rm ../../tmp*;");
+} 
+
+//从文件中删除行,包括ln所在行以及之后的count行,返回删除掉的行数
+macro restoreMakeFile(depend_file)
+{
+    str = GetEnv("cmd_str0");//标志内容
+    ln = lineOfFile(depend_file,str);
+    count = GetEnv("cmd_count");// 4; 
+    
+    if(0 == ifExist(depend_file) || ln == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        hbuf = OpenBuf(depend_file);
+        ln  = GetBufLineCount (hbuf) ;  
+        
+        i = ln;
+        while(i > ln - count)
+        {
+            DelBufLine (hbuf, i - 1);
+            i = i - 1;
+        }
+        SaveBuf (hbuf); 
+
+        CloseBuf(hbuf);
+        return count;
+    }
+}
+
+//向depend文件写入linux命令(用于提取宏以及处理),返回插入命令的行数
+macro writeMakeFile(depend_file)
+{
+    str = GetEnv("cmd_str0");//标志内容
+    ln = lineOfFile(depend_file,str);
+
+    cmdLnCnt = GetEnv("cmd_count");// 4;
+    if(0 == ln)//文件中无命令
+    {                               
+        if(0 == depend_file )
+        {
+            return 0;
+        }
+        else if(0 == ifExist(depend_file))
+        {
+            return 0;
+        }
+        else
+        {           
+            hbuf = OpenBuf (depend_file);           
+            ln  = GetBufLineCount (hbuf) ;      
+            
+            i = cmdLnCnt - 1;
+            while(i >= 0)
+            {
+                InsBufLine (hbuf, ln, GetEnv(cat("cmd_str",i)));
+                i = i - 1;
+            }
+            
+            SaveBuf (hbuf); 
+            CloseBuf (hbuf);
+
+            return cmdLnCnt;
+        }
+    }
+    else
+    {
+        return cmdLnCnt;
+    }
+}
+
+//根据file的内容，向hProj添加环境变量
+macro setCondition(hProj, con_file)
+{   
+    ln = 0;
+    
+    if(ifExist(con_file))
+    {
+        hbuf = OpenBuf(con_file);
+        
+        ln_cnt = GetBufLineCount(hbuf);
+        while(ln<ln_cnt)
+        {
+            str = GetBufLine(hbuf, ln);
+
+            if(str != " ")
+            { 
+                DeleteConditionVariable(hProj, nameOf(str));
+                AddConditionVariable(hProj, nameOf(str), valueOf(str));
+            }   
+            ln = ln + 1;
+        }
+
+        CloseBuf (hbuf);
+    }
+
+    return ln;
+}
+
+//清除工程内，file文件指定的环境变量,返回删除掉的变量数
+macro clearCondition(hProj,file)
+{
+    if(0 == ifExist(file))
+    {
+        return 0;
+    }
+    else
+    {
+        hbuf = OpenBuf(file);
+        ln_cnt = GetBufLineCount (hbuf);
+        ln = 0;
+        while(ln<ln_cnt)
+        {
+            str = GetBufLine(hbuf, ln);
+            DeleteConditionVariable(hProj ,nameOf(str));
+            ln = ln + 1;
+        }
+        
+        CloseBuf (hbuf);
+        //SyncProjEx (hProj, 0, 1,0);
+        return ln;
+    }
+}
+
+//避免自己输入代码路径
+macro searchDir()
+{
+    hbuf = GetCurrentBuf ();
+    dir_str = GetBufName (hbuf);
+    pos = strlen(dir_str) - 1;
+    while(pos > 0)
+    {
+        while(pos > 0)
+        {
+            if(strmid (dir_str, pos, pos + 1) == "\\")
+                break;
+            pos = pos - 1;
+        }
+        if(ifExist(cat(strmid(dir_str, 0, pos ),"\\Build\\depend")))
+            break;
+        pos = pos - 1;
+    }
+    if(pos > 0)
+        return strmid(dir_str, 0, pos );
+    else
+        return -1;
+}
+//避免make:nothing to been done for all;的情况
+macro modiFile()
+{
+    hbuf = GetCurrentBuf ();
+    ln_cnt = GetBufLineCount (hbuf);
+
+    if(GetBufLine (hbuf, ln_cnt - 1) == "  ")
+        DelBufLine (hbuf, ln_cnt - 1);
+    else
+        AppendBufLine (hbuf, "  ");
+
+    SaveBuf (hbuf);
+}
+
+macro getFileName(str)
+{//倒序查找"\"
+    pos = strlen(str) - 1;
+    while(pos >= 0)
+    {   
+        if(strmid (str,pos, pos+1) == "\\")
+            return pos;
+        pos = pos - 1;
+    }
+}
+
+/*********************End Set Macro Functions*********************/
+
 
 /*********************Start Other Functions*********************/
 
@@ -2704,357 +3287,6 @@ macro CW_completeword(hBuf, completion, i)
 }
 
 ////////////////////////////Functions/////////////////////////////
-macro checkEnv()
-{
-		//版本判断,3.5056以下程序不支持
-		ProVer = GetProgramInfo ();
-		if(ProVer.versionMinor < 50 || ProVer.versionBuild < 56)
-		{
-			Msg("您的Source Insight版本太低，如需使用此工具，请安装3.50.0060及以上版。");
-			stop
-		}
-		
-		initGlobal();//初始化全局变量
-		
-		hProj = GetCurrentProj ();
-		dir_proj = GetProjDir (hProj);
-
-		//寻找代码目录
-		depend_file = cat(dir_proj, "\\Build\\depend");
-		
-		//depend文件不存在,说明代码和source insight工程不在一个文件夹，则询问
-		if(0 == ifExist(depend_file) )
-		{	
-			dir_proj = searchDir();
-		}
-		
-		if(-1 == dir_proj )
-		{
-			dir_proj = Ask("请输入当前工程的代码目录，如'D:\\Code\\P_2011.05.04_XQ_2.608'，最后无斜杠。");
-		}
-
-		//根据宏名列表文件,清除已经存在的环境变量
-		con_file = cat(dir_proj, "\\clsList");
-		clearCondition(hProj,con_file);
-		//syncProj (hProj);
-		Msg("当前已清理已有的宏，恢复了默认状态。要继续设置环境，请点击确定；如果您想恢复默认，请点取消或者右上角的'X'按钮。");		
-		
-		//向depend文件写入命令		
-		depend_file = cat(dir_proj, "\\Build\\depend");
-		cmd_count = writeDependFile(depend_file)
-		
-		//向depend_ti文件写入命令
-		depend_file = cat(dir_proj, "\\Build\\depend_ti");
-		writeDependFile(depend_file)
-
-		modiFile();
-		
-		Msg("请先编译您的工程，编译完后再按确定!");
-
-		//向工程添加环境变量
-		con_file = cat(dir_proj, "\\define");
-		addCondition(hProj,con_file);
-
-		//从depend文件中清除linux命令
-		depend_file = cat(dir_proj, "\\Build\\depend");
-		ln = lineOfFile(depend_file, GetEnv("cmd_str0"));
-		deleteCommand(depend_file, ln, cmd_count);
-
-		depend_file = cat(dir_proj, "\\Build\\depend_ti");
-		ln = lineOfFile(depend_file, GetEnv("cmd_str0"));
-		deleteCommand(depend_file, ln, cmd_count);
-
-		con_file = cat(dir_proj, "\\define");
-		if(0 != ifExist(con_file))
-		{
-			//syncProj (hProj);
-						
-			Msg("环境变量已经设定。");			
-		}
-		else
-		{
-			Msg("您是否未编译、或者代码路径有误、又或者没有编译时__make:Nothing to be done for 'all'?如果是，请更改文件后重新操作。");
-		}
-		
-		//清理中间文件,避免对下次产生干扰,但保留clsList，用于清理环境变量			
-		com_str = cat("cmd /C \"del ",cat(dir_proj, "\\clsList\""));
-		RunCmdLine (com_str, dir_proj, 1);		
-		
-		com_str = cat("cmd /C \"ren ",cat(dir_proj, "\\define clsList\""));
-		RunCmdLine (com_str, dir_proj, 1);
-}
-
-//取行的名称,例如取"version=2.6"中的"version",如果不含等号，则返回原字符串。
-macro nameOf(str)
-{
-	pos=0;
-	while(pos<strlen (str))
-	{
-		if(strmid (str,pos, pos+1) == "=")
-			break;
-		pos = pos + 1;
-	}
-	return strmid (str,0,pos);
-}
-
-//取等式的值,例如取"version=2.6"中的"2.6"，如果不含等号，则返回"0"
-macro valueOf(str)
-{
-	pos=0;
-	while(pos<strlen (str))
-	{
-		if(strmid (str,pos, pos+1) == "=")
-			break;
-		pos = pos + 1;
-	}
-
-	if(strlen(str) == pos)
-		return "0";
-	else
-		return strmid (str,pos+1,strlen (str));
-}
-
-//判断文件是否存在,0代表不存在,1代表存在
-macro ifExist(file)
-{
-	hbuf = OpenBuf(file);
-	if(0 == hbuf )
-	{
-		return 0;
-	}
-	else
-	{
-		CloseBuf(hbuf);
-		return 1;
-	}
-}
-
-//返回特定内容在文件中的行序号
-macro lineOfFile(file, str)
-{
-	if(0 == ifExist(file))
-	{
-		return 0;
-	}
-	else
-	{
-		hbuf = OpenBuf (file);
-		ln_cnt = GetBufLineCount(hbuf);
-		ln = 0;	
-		while(ln<ln_cnt)
-		{
-			if(str == GetBufLine (hbuf, ln))
-				return ln;
-				
-			ln = ln + 1;
-		}
-		CloseBuf (hbuf);		
-		return 0;
-
-	}
-}
-
-//把要写进depend文件的命令写入系统的环境变量里，
-//当做全局变量使用,便于以后更改程序
-macro initGlobal()
-{
-	PutEnv("cmd_count", "10");//需要插入的命令行数
-	
-	putEnv("cmd_str0","\t-\@echo Collecting condition variables......");
-	
-	putEnv("cmd_str1","\t-\@find ../../ -name *.cpp -exec grep -E '#endif|#ifdef|(\\s+|\\t+)defined|#elif' {} \\; > ../../tmp ;cat ../../tmp|sed -r '/\\//d'|sed -r 's/\\|\\||&&/\\n/g' >../../tmp_0");
-	putEnv("cmd_str2","\t-\@cat ../../tmp_0|sed -r 's/#endif|#elif|#ifdef|#if\\s|defined//g'|sed -r 's/\\\\|!|\\(|\\)//g'|sed -r '/\\/|=|>|<|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sort|uniq > ../../tmp0");
-	
-	putEnv("cmd_str3","\t-\@cat ../../tmp|grep -E -o '.*\\/\\/'|sed -r 's/\\/\\///g'|sed -r 's/\\|\\||&&/\\n/g'|sed -r 's/#endif|#elif|#ifdef|#if\\s|defined//g'|sed -r 's/!|\\(|\\)//g' >../../tmp_0");
-	putEnv("cmd_str4","\t-\@cat ../../tmp_0|sed -r '/\\/|=|>|<|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sort|uniq >> ../../tmp0;cat ../../tmp0|sed -r '/^\s*[0-9]*\s*$$$//d'|sed -r '/^\\s*[0-9]+\\s*$$$//d'|sort|uniq >../../defined.all");
-	
-	putEnv("cmd_str5","\t-\@echo $(CFLAGS)|grep -E -o '\\-D.*'|sed -r 's/(-D|-U)/\\n/g'|sed -r 's/\\s*=\\s*1//g'|sed -r 's/\\\"//g' >../../tmpp1;echo $(CFLAGS)|grep -E '\\-U[^ ]+' -o|sed -r 's/-U//g'>../../defined.undef;grep -v -f ../../defined.undef ../../tmpp1 >../../tmp1;");
-	putEnv("cmd_str6","\t-\@cat ../../tmp1|sed -r '/=|^\\s*$$$//d'|sed -r 's/\\s*|\\t*//g'|sed -r 's/(.*)/^\\1$$$//'|sort|uniq >../../defined.noequal");
-	putEnv("cmd_str7","\t-\@cat ../../tmp1|sed -r '/^\\s*$$$//d'|grep -E '='|sed -r 's/\\s*|\\t*//g'|sort|uniq >../../defined.equal");
-	
-	putEnv("cmd_str8","\t-\@grep -v -f ../../defined.noequal  ../../defined.all|sed -r 's/(.*)/\\1=0/' > ../../define;cat ../../defined.noequal|sed -r 's/\\^//'|sed -r 's/\\$$$//=1/' >> ../../define;cat ../../defined.equal >> ../../define");
-	
-	putEnv("cmd_str9","\t-\@rm ../../tmp* ../../defined.*");
-	
-}
-
-//向文件的ln行写入命令,参数是已打开文件的句柄，返回插入命令的行数
-macro writeCommand(file, ln)
-{
-	cmdLnCnt = GetEnv("cmd_count");// 10;
-
-	if(0 == file && ln == 0)
-	{
-		return 
-	}
-	else if(0 == ifExist(file))
-	{
-		return cmdLnCnt;
-	}
-	else
-	{
-		hbuf = OpenBuf (file);
-
-		i = cmdLnCnt - 1;
-		while(i >= 0)
-		{
-			InsBufLine (hbuf, ln, GetEnv(cat("cmd_str",i)));
-			i = i - 1;
-		}
-		
-		SaveBuf (hbuf);	
-		CloseBuf (hbuf);
-
-		return cmdLnCnt;
-	}
-}
-
-//从文件中删除行,包括ln所在行以及之后的count行,返回删除掉的行数
-macro deleteCommand(file,ln,count)
-{
-	if(0 == ifExist(file) || ln == 0)
-	{
-		return 0;
-	}
-	else
-	{
-		hbuf = OpenBuf(file);
-		if(ln + count< GetBufLineCount(hbuf))
-		{
-			i = count - 1;
-			while(i >= 0)
-			{
-				DelBufLine (hbuf, ln + i);
-				i = i - 1;
-			}	
-			SaveBuf (hbuf);	
-		}
-		
-		CloseBuf(hbuf);
-		return count;
-	}
-}
-
-//向depend文件写入linux命令(用于提取宏以及处理),返回插入命令的行数
-macro writeDependFile(depend_file)
-{
-	str = GetEnv("cmd_str0");//标志内容
-	ln = lineOfFile(depend_file,str);
-
-	if(0 == ln)//文件中无命令
-	{	
-		str = "\t$(AR) crus $\@ $(OBJS)";//生成libapp.a的工程的标志行
-		ln_lib = lineOfFile(depend_file,str);
-		if(0 != ln_lib)//如果是生成libapp.a的工程
-		{
-			return writeCommand(depend_file,ln_lib + 1);
-		}
-		else
-		{
-			str = "\t\@echo $(CFLAGS)";//Challenge的工程的标志行
-			ln_ch = lineOfFile(depend_file,str);
-
-			return writeCommand(depend_file,ln_ch + 1);
-		}		
-	}
-	else
-	{	//当参数为0，0时，writeCommand不处理文件，仅返回插入命令的行数，
-		//这么做是为解耦，避免这里返回文件中已经插入的命令的行数，
-		//checkEnv依此来恢复depend文件
-		return 9;//writeCommand(0, 0);
-	}
-}
-
-//根据file的内容，向hProj添加环境变量
-macro addCondition(hProj, file)
-{	
-	if(0 == ifExist(file))
-	{
-		return 0;
-	}
-	else
-	{
-		hbuf = OpenBuf(file);
-		
-		ln_cnt = GetBufLineCount(hbuf);
-		ln = 0;
-		while(ln<ln_cnt)
-		{
-			str = GetBufLine(hbuf, ln);
-			
-			if(str != " ")	
-				AddConditionVariable(hProj ,nameOf(str), valueOf(str));
-				
-			ln = ln + 1;
-		}
-		
-		CloseBuf (hbuf);
-		return ln;
-	}
-}
-
-//清除工程内，file文件指定的环境变量,返回删除掉的变量数
-macro clearCondition(hProj,file)
-{
-	if(0 == ifExist(file))
-	{
-		return 0;
-	}
-	else
-	{
-		hbuf = OpenBuf(file);
-		ln_cnt = GetBufLineCount (hbuf);
-		ln = 0;
-		while(ln<ln_cnt)
-		{
-			str = GetBufLine(hbuf, ln);
-			DeleteConditionVariable(hProj ,nameOf(str));
-			ln = ln + 1;
-		}
-		
-		CloseBuf (hbuf);
-		return ln;
-	}
-}
-
-//避免自己输入代码路径
-macro searchDir()
-{
-	hbuf = GetCurrentBuf ();
-	dir_str = GetBufName (hbuf);
-	pos = strlen(dir_str) - 1;
-	while(pos > 0)
-	{
-		while(pos > 0)
-		{
-			if(strmid (dir_str, pos, pos + 1) == "\\")
-				break;
-			pos = pos - 1;
-		}
-		if(ifExist(cat(strmid(dir_str, 0, pos ),"\\Build\\depend")))
-			break;
-		pos = pos - 1;
-	}
-	if(pos > 0)
-		return strmid(dir_str, 0, pos );
-	else
-		return -1;
-}
-//避免make:nothing to been done for all;的情况
-macro modiFile()
-{
-	hbuf = GetCurrentBuf ();
-	ln_cnt = GetBufLineCount (hbuf);
-
-	if(GetBufLine (hbuf, ln_cnt - 1) == "  ")
-		DelBufLine (hbuf, ln_cnt - 1);
-	else
-		AppendBufLine (hbuf, "  ");
-
-	SaveBuf (hbuf);
-}
-
-////////////////////////////Functions/////////////////////////////
 
 /*
     Macro command that performs a progressive search as the user types.
@@ -3123,3 +3355,4 @@ macro ProgressiveSearch()
     }
 }
     
+
