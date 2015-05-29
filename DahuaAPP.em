@@ -1,6 +1,6 @@
 /*
 大华Source Insight插件
-Goto v1.0.0
+Goto v1.0.1
 **此为开发版本，相关功能不可用**
 
 Source Insight功能：
@@ -602,9 +602,15 @@ macro ShowCompleteWord(key)
 
     hwordbuf = GetOrCreateBuf("*FindAllWord*")
     maxCount = GetBufLineCount(hwordbuf)
+    lastKey = GetBufLine(hwordbuf, 0)
+    maxWord = GetBufLine(hwordbuf, 1)
     // Msg(maxCount)
+    // Msg(lastKey)
+    // Msg(maxWord)
+    //update key
+    PutBufLine(hwordbuf, 0, key)
 
-    if( maxCount == 0 )
+    if( maxCount == 2 )
     {
         return false
     }
@@ -643,9 +649,9 @@ macro ShowCompleteWord(key)
     }
 
     //只有一行结果，直接补全
-    if( maxCount == 1 )
+    if( maxCount == 3 )
     {
-        linebuf = GetBufLine(hwordbuf, 0)
+        linebuf = GetBufLine(hwordbuf, 2)
         linebuf = TrimLeft(linebuf)
         if( linebuf == key )
         {
@@ -657,11 +663,27 @@ macro ShowCompleteWord(key)
         newsel.lnFirst = sel.lnFirst
         newsel.ichFirst = sel.ichFirst
         SetWndSel(hwnd,newsel)
-        SetBufSelText(hbuf,linebuf # "\"]")
+        SetBufSelText(hbuf,linebuf)
 
         return true
     }
-    
+    else if( lastKey == key && maxWord != key )
+    {
+        sel.ichFirst = sel.ichFirst-strlen(key)
+        SetWndSel(hWnd, sel)
+        SetBufSelText(hbuf,maxWord)
+        PutBufLine(hwordbuf, 0, key)
+        return true
+    }
+    else if( lastKey == key && maxWord == key )
+    {
+        newsel.ichFirst = sel.ichFirst-strlen(key)
+        newsel.lnFirst = sel.lnFirst
+        SetWndSel(hWnd, newsel)
+        SetBufSelText(hbuf,maxWord # "\"]")
+        PutBufLine(hwordbuf, 0, "")
+        return true
+    }
 
     if( startLine != 0 && endLine != 0 )
     {
@@ -674,19 +696,40 @@ macro ShowCompleteWord(key)
     }
 
     // Msg(maxCount)
-    index = 0
+    index = 2
     while( index < maxCount )
     {
         linebuf = GetBufLine(hwordbuf, index)
-        InsBufLine(hBuf, ln+2+index,linebuf)
+        // Msg(linebuf)
+        InsBufLine(hBuf, ln+index,linebuf)
 
         index = index + 1
     }
 
-    InsBufLine(hbuf, ln+2+index, "<<<word")
+    InsBufLine(hbuf, ln+index, "<<<word")
     SetWndSel(hwnd, sel)
 
+    PutBufLine(hwordbuf, 0, key)
     return true
+}
+macro GetMaxWord(word1, word2)
+{
+    i = 0
+    len1 = strlen(word1)
+    len2 = strlen(word2)
+    maxWord = ""
+    while( i < len1 && i < len2 )
+    {
+        if( word1[i] != word2[i] )
+        {
+            break
+        }
+
+        maxWord = maxWord # word1[i]
+        i = i + 1
+    }
+
+    return maxWord
 }
 
 macro FindAll(key)
@@ -696,11 +739,26 @@ macro FindAll(key)
     hbuf = GetWndBuf(hWnd)
 
     hnewbuf = GetOrCreateBuf("*FindAllWord*")
-    ClearBuf(hnewbuf)
+    if( GetBufLineCount(hnewbuf) >= 2 )
+    {
+        bak1 = GetBufLine(hnewbuf, 0)
+        bak2 = GetBufLine(hnewbuf, 1)
+        ClearBuf(hnewbuf)
+        AppendBufLine(hnewbuf, bak1)
+        AppendBufLine(hnewbuf, bak2)
+    }
+    else
+    {
+        AppendBufLine(hnewbuf, "")
+        AppendBufLine(hnewbuf, "")
+    }
 
     findFlag = false
     searchLine = 1
     blanks = Space(sel.ichFirst - strlen(key))
+
+
+    maxWord = key
     while(1)
     {
         search = SearchInBuf(hbuf, key # "[a-zA-Z0-9_]*", searchLine,0,1,1,0)
@@ -716,9 +774,18 @@ macro FindAll(key)
             // Msg(word)
 
             //去重append
-            if( SearchInBuf(hnewbuf, word, 0,0,1,0,1) == "" )
+            if( SearchInBuf(hnewbuf, word, 2,0,1,0,1) == "" )
             {
                 // Msg(word)
+                if( GetBufLineCount(hnewbuf) == 2 )
+                {
+                    maxWord = word
+                }
+                else
+                {
+                    maxWord = GetMaxWord(maxWord, word)
+                }
+                // Msg(maxWord)
                 AppendBufLine(hnewbuf, blanks # word)
             }
 
@@ -726,6 +793,7 @@ macro FindAll(key)
         }
         searchLine = search.lnFirst + 1
     }
+    PutBufLine(hnewbuf, 1, maxWord)
     // Msg("finish")
     return findFlag
 }
@@ -739,15 +807,15 @@ macro CompleteJson(keyinfo)
     linebuf = GetBufLine(hbuf,ln)
 
     // Msg(keyinfo)
-    if( keyinfo.ich <= 2 || keyinfo.key == "" )
+    if( keyinfo.key == "" )
     {
         return false
     }
     // 不处理非json字段
-    if( linebuf[keyinfo.ich-1] != "\"" || linebuf[keyinfo.ich-2] != "[" )
-    {
-        return false
-    }
+    // if( linebuf[keyinfo.ich-1] != "\"" || linebuf[keyinfo.ich-2] != "[" )
+    // {
+    //     return false
+    // }
 
     if( FindAll(keyinfo.key) == true )
     {
@@ -756,6 +824,7 @@ macro CompleteJson(keyinfo)
 
     return false
 }
+
 macro JumpNextArgs(key)
 {
     if( key == "" )
@@ -1801,6 +1870,15 @@ macro JumpBlock()
 macro SelectBlockEx()
 {
     Select_Block
+}
+
+macro CopyFileName()
+{
+    hbuf = GetCurrentBuf()
+    bufname = GetBufName(hbuf)
+    pos = strrstr(bufname, "\\", 1)
+    bufname = strmid(bufname, pos, strlen(bufname))
+
 }
 macro CopyPrevFilePath()
 {
