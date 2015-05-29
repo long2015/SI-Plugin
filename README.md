@@ -1,8 +1,9 @@
 README for the SI-Plugin
 ========================
 
-SI-Plugin source insight macro plugin
-2014年5月17日
+DahuaAPP.em Source Insight Plugin  
+2015年5月29日
+**此为开发版本，相关功能不可用**
 
 功能:
 =====

@@ -1,34 +1,14 @@
 /*
-//大华Source Insight插件
-v0.12.0
+大华Source Insight插件
+Goto v1.0.0
+**此为开发版本，相关功能不可用**
 
-//此插件融合各方插件功能
-//修改使适用于大华，提高研发开发效率
-//
-//2014年5月17日
-//
-//
-//功能：
-//1、tab键
-//自动补全功能if else while for 
-//trace include main
-//2、插入函数名
-//InsertFuncName
-//InsertPoint
-//4、光标移动
-//行首，行尾
-//
-//5、svn相关
-//log diff blace explorer
-//
-//6、注释
-//多行注释
-//Doxygen文档注释：函数、
-//6、快捷启动Ctrl+Enter
-//
-//7、文件操作
-//文件切换Ctrl+d
+Source Insight功能：
+tab补全，插入函数名，cpp头文件间跳转，复制头文件路径，复制当前文件名
+
+更多信息，visit: [https://github.com/long2015/SI-Plugin]
 */
+
 
 /*********************Start Base Functions*********************/
 
