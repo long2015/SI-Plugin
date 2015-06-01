@@ -65,6 +65,8 @@ macro strrstr(str,str1,n)
 
     return -1;
 }
+
+// 生成N个空格
 macro Space(n)
 {
     str = ""
@@ -76,6 +78,7 @@ macro Space(n)
     }
     return str
 }
+// 字符串替换
 macro strreplace(str, old,new)
 {
     len = strlen(str)
@@ -98,7 +101,7 @@ macro TrimString(szLine)
     szLIne = TrimRight(szLine)
     return szLine
 }
-
+// 去除左边空格
 macro TrimLeft(szLine)
 {
     nLen = strlen(szLine)
@@ -117,6 +120,7 @@ macro TrimLeft(szLine)
     }
     return strmid(szLine,nIdx,nLen)
 }
+// 去除右边空格
 macro TrimRight(szLine)
 {
     nLen = strlen(szLine)
@@ -135,6 +139,24 @@ macro TrimRight(szLine)
     }
     return strmid(szLine,0,nIdx+1)
 }
+// 解析光标位置的符号信息
+// symbol.type key ichFist ichLim lnFirst
+macro ParseSymbol()
+{
+    hwnd = GetCurrentWnd()
+    sel = GetWndSel(hwnd)
+    hbuf = GetWndBuf(hwnd)
+    linebuf = GetBufLine(hbuf, sel.lnFirst);
+    linebufLen = strlen(linebuf)
+
+    // 不解析多选的情况
+    // if( sel.)  
+
+    // 往左遍历
+
+    // 往右分析
+}
+
 macro GetLeftWord(ich, sz)
 {
     wordinfo = "" // create a "wordinfo" structure
@@ -440,7 +462,6 @@ macro tabCompletion()
     key = keyinfo.key
     // Msg(key)
 
-    lnblanks = GetBeginBlank(linebuf)
     ln = sel.lnFirst
 
     //先跳出
